@@ -24,12 +24,15 @@ _SerieCoin est une plateforme blockchain permettant aux créateurs de séries de
 
 
 5. **Retour sur investissement**
-    - Une fois le projet terminé et distribué (TV, streaming, cinéma...), les revenus générés sont redistribués aux investisseurs proportionnellement à leur -  - contribution.
+    - Une fois le projet terminé et distribué (TV, streaming, cinéma...), les revenus générés sont redistribués aux investisseurs proportionnellement à leur contribution.
     - Les détenteurs de parts du NFT peuvent aussi les revendre sur un marché secondaire.
 
 
 **Avantages de SerieCoin**
 ✅ Transparence & Sécurité grâce à la blockchain
+
 ✅ Accessibilité pour les petits et grands investisseurs
+
 ✅ Nouveau modèle de financement alternatif au système traditionnel
+
 ✅ Encouragement de la création indépendante
