@@ -29,6 +29,7 @@ _SerieCoin est une plateforme blockchain permettant aux créateurs de séries de
 
 
 **Avantages de SerieCoin**
+
 ✅ Transparence & Sécurité grâce à la blockchain
 
 ✅ Accessibilité pour les petits et grands investisseurs
