@@ -5,8 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract SRCToken is ERC20, ERC20Burnable, Ownable(msg.sender) {
-    constructor(uint256 initialSupply) ERC20("SerieCoin", "SRC") {
-        _mint(msg.sender, initialSupply * 10 ** decimals());
+contract Seriecoin is ERC20, ERC20Burnable, Ownable(msg.sender) {
+    constructor() ERC20("Seriecoin", "SRC") {}
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
     }
 }

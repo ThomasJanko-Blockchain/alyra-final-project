@@ -1,4 +1,5 @@
 require("@nomicfoundation/hardhat-toolbox");
+require('hardhat-docgen');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -8,5 +9,10 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
     },
+  },
+  docgen: {
+    runOnCompile: true,
+    outputDir: "./docs",
+    pages: "files",
   },
 };

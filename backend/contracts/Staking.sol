@@ -2,30 +2,66 @@
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Staking is Ownable(msg.sender) {
-    IERC20 public srcToken;
-    IERC721 public projectNFT;
-    mapping(address => uint256) public stakedAmount;
+    IERC20 public stakingToken;
+    IERC20 public rewardToken;
+    uint256 public rewardRate; // Rewards per block
+    uint256 public lastUpdateBlock;
+    uint256 public rewardPerTokenStored;
 
-    constructor(address _srcToken, address _projectNFT) {
-        srcToken = IERC20(_srcToken);
-        projectNFT = IERC721(_projectNFT);
+    mapping(address => uint256) public userRewardPerTokenPaid;
+    mapping(address => uint256) public rewards;
+    mapping(address => uint256) public balances;
+
+    uint256 private _totalSupply;
+
+    constructor(address _stakingToken, address _rewardToken, uint256 _rewardRate) {
+        stakingToken = IERC20(_stakingToken);
+        rewardToken = IERC20(_rewardToken);
+        rewardRate = _rewardRate;
+        lastUpdateBlock = block.number;
     }
 
-    function stake(uint256 amount) external {
-        require(amount > 0, "Amount must be greater than zero");
-        srcToken.transferFrom(msg.sender, address(this), amount);
-        stakedAmount[msg.sender] += amount;
+    function stake(uint256 amount) public {
+        updateReward(msg.sender);
+        stakingToken.transferFrom(msg.sender, address(this), amount);
+        balances[msg.sender] += amount;
+        _totalSupply += amount;
     }
 
-    function redeem(uint256 nftTokenId) external {
-        require(projectNFT.ownerOf(nftTokenId) == address(this), "NFT not staked");
-        require(stakedAmount[msg.sender] > 0, "No staked SRC tokens");
+    function withdraw(uint256 amount) public {
+        updateReward(msg.sender);
+        balances[msg.sender] -= amount;
+        _totalSupply -= amount;
+        stakingToken.transfer(msg.sender, amount);
+    }
 
-        projectNFT.transferFrom(address(this), msg.sender, nftTokenId);
-        stakedAmount[msg.sender] = 0;
+    function claimReward() public {
+        updateReward(msg.sender);
+        uint256 reward = rewards[msg.sender];
+        rewards[msg.sender] = 0;
+        rewardToken.transfer(msg.sender, reward);
+    }
+
+    function updateReward(address account) internal {
+        rewardPerTokenStored = rewardPerToken();
+        lastUpdateBlock = block.number;
+        if (account != address(0)) {
+            rewards[account] = earned(account);
+            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+        }
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (_totalSupply == 0) {
+            return rewardPerTokenStored;
+        }
+        return rewardPerTokenStored + ((block.number - lastUpdateBlock) * rewardRate * 1e18 / _totalSupply);
+    }
+
+    function earned(address account) public view returns (uint256) {
+        return (balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18) + rewards[account];
     }
 }
