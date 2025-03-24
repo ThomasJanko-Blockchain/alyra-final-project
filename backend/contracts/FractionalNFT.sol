@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// @title FractionalNFT
+// @notice Contrat pour la création de fractions d'un NFT
 contract FractionalNFT is ERC20, Ownable(msg.sender) {
     IERC721 public nft;
     uint256 public tokenId;

@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// @title Lending
+// @notice Contrat pour la création de prêts
 contract Lending is Ownable(msg.sender) {
     using SafeERC20 for IERC20;
 
@@ -27,6 +29,7 @@ contract Lending is Ownable(msg.sender) {
     event LoanIssued(address indexed borrower, uint256 principal, uint256 interest, uint256 startTime, uint256 endTime);
     event LoanRepaid(address indexed borrower, uint256 amount, uint256 repaidAt);
 
+    // @dev Constructeur: initialise le contrat avec les paramètres du prêt
     constructor(
         address _usdcToken,
         address _fNFTToken,
@@ -41,7 +44,9 @@ contract Lending is Ownable(msg.sender) {
         loanDuration = _loanDuration;
     }
 
+    // @dev Fonction pour déposer une garantie et emprunter
     function depositCollateralAndBorrow(uint256 collateralAmount) external {
+
         require(loans[msg.sender].principal == 0, "Existing loan must be repaid first");
         require(collateralAmount > 0, "Collateral amount must be greater than zero");
 
@@ -67,6 +72,7 @@ contract Lending is Ownable(msg.sender) {
         emit LoanIssued(msg.sender, loanPrincipal, loanInterest, block.timestamp, block.timestamp + loanDuration);
     }
 
+    // @dev Fonction pour rembourser un prêt
     function repayLoan() external {
         Loan storage loan = loans[msg.sender];
         require(loan.principal > 0, "No active loan found");
@@ -87,6 +93,7 @@ contract Lending is Ownable(msg.sender) {
         emit LoanRepaid(msg.sender, totalRepayment, block.timestamp);
     }
 
+    // @dev Fonction pour liquider un prêt
     function liquidateLoan(address borrower) external onlyOwner {
         Loan storage loan = loans[borrower];
         require(loan.principal > 0, "No active loan found");

@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// @title LiquidityPool
+// @notice Contrat pour la création de la pool de liquidité (Euroa / SerieCoin)
 contract LiquidityPool is Ownable(msg.sender) {
     IERC20 public euroa;
     IERC20 public src;
@@ -16,6 +18,7 @@ contract LiquidityPool is Ownable(msg.sender) {
         src = IERC20(_src);
     }
 
+    // @dev Fonction pour ajouter de la liquidité à la pool
     function addLiquidity(uint256 euroaAmount, uint256 srcAmount) external {
         euroa.transferFrom(msg.sender, address(this), euroaAmount);
         src.transferFrom(msg.sender, address(this), srcAmount);
@@ -23,6 +26,7 @@ contract LiquidityPool is Ownable(msg.sender) {
         totalLiquidity += euroaAmount + srcAmount;
     }
 
+    // @dev Fonction pour retirer de la liquidité de la pool
     function removeLiquidity(uint256 amount) external {
         require(liquidityProvided[msg.sender] >= amount, "Insufficient liquidity");
         uint256 euroaShare = (amount * euroa.balanceOf(address(this))) / totalLiquidity;
