@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// @title Staking
+// @notice Contrat pour le staking des tokens
 contract Staking is Ownable(msg.sender) {
     IERC20 public stakingToken;
     IERC20 public rewardToken;
@@ -17,6 +19,7 @@ contract Staking is Ownable(msg.sender) {
 
     uint256 private _totalSupply;
 
+    // @dev Constructeur: initialise le contrat avec les paramètres du staking
     constructor(address _stakingToken, address _rewardToken, uint256 _rewardRate) {
         stakingToken = IERC20(_stakingToken);
         rewardToken = IERC20(_rewardToken);
@@ -24,6 +27,7 @@ contract Staking is Ownable(msg.sender) {
         lastUpdateBlock = block.number;
     }
 
+    // @dev Fonction pour staker des tokens
     function stake(uint256 amount) public {
         updateReward(msg.sender);
         stakingToken.transferFrom(msg.sender, address(this), amount);
@@ -31,6 +35,7 @@ contract Staking is Ownable(msg.sender) {
         _totalSupply += amount;
     }
 
+    // @dev Fonction pour retirer des tokens
     function withdraw(uint256 amount) public {
         updateReward(msg.sender);
         balances[msg.sender] -= amount;
@@ -38,6 +43,7 @@ contract Staking is Ownable(msg.sender) {
         stakingToken.transfer(msg.sender, amount);
     }
 
+    // @dev Fonction pour récupérer les rewards
     function claimReward() public {
         updateReward(msg.sender);
         uint256 reward = rewards[msg.sender];
@@ -45,6 +51,7 @@ contract Staking is Ownable(msg.sender) {
         rewardToken.transfer(msg.sender, reward);
     }
 
+    // @dev Fonction pour mettre à jour les rewards
     function updateReward(address account) internal {
         rewardPerTokenStored = rewardPerToken();
         lastUpdateBlock = block.number;
@@ -54,6 +61,7 @@ contract Staking is Ownable(msg.sender) {
         }
     }
 
+    // @dev Fonction pour calculer les rewards par token
     function rewardPerToken() public view returns (uint256) {
         if (_totalSupply == 0) {
             return rewardPerTokenStored;
@@ -61,6 +69,7 @@ contract Staking is Ownable(msg.sender) {
         return rewardPerTokenStored + ((block.number - lastUpdateBlock) * rewardRate * 1e18 / _totalSupply);
     }
 
+    // @dev Fonction pour calculer les rewards par token
     function earned(address account) public view returns (uint256) {
         return (balances[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18) + rewards[account];
     }
