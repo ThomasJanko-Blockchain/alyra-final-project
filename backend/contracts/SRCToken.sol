@@ -6,13 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // @title Seriecoin
-// @notice Contrat pour la création du token natif SerieCoin
+// @notice Contract for the native SerieCoin token
 contract Seriecoin is ERC20, ERC20Burnable, Ownable(msg.sender) {
-    // @dev Constructeur: initialise le contrat avec le nom et le symbole du token
+    uint256 public constant REWARD_RATE = 5; // 5% SRC rewards for protocol participation
+
     constructor() ERC20("Seriecoin", "SRC") {}
 
-    // @dev Fonction pour créer des fractions du NFT
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
+    }
+
+    function mintRewards(address to, uint256 amount) external onlyOwner {
+        uint256 rewardAmount = (amount * REWARD_RATE) / 100;
+        _mint(to, rewardAmount);
     }
 }
