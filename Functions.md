@@ -68,3 +68,28 @@
 
     - claimRevenue(): Permet aux détenteurs de fNFT de réclamer leurs parts des revenus distribués.​
 
+
+
+**3. Fonctionnalités de l'Interface Utilisateur (Frontend) :**
+
+- Pour les Producteurs :
+
+    - Soumettre un projet avec les détails nécessaires (scénario, besoins en financement, durée de réalisation).​
+
+    - Créer et déposer des NFT représentant les droits de cession d'auteur.​
+
+    - Fractionner les NFT pour les rendre disponibles aux investisseurs.​
+
+    - Suivre l'état des emprunts et gérer les remboursements.​
+
+    - Gérer la redistribution des revenus aux investisseurs.​
+
+- Pour les Investisseurs :
+
+    - Parcourir et sélectionner des projets à financer.​
+
+    - Acheter des tokens SRC et les staker pour recevoir des fNFT.​
+
+    - Suivre les investissements, les récompenses de staking et les revenus générés.​
+
+    - Réclamer les parts de revenus et décider de les réinvestir ou de les retirer.​
