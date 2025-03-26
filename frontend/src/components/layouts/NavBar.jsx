@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ModeToggle } from "../ui/modeToogle";
-import Menu from "./Menu";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+
 
 export default function NavBar() {
   return (
@@ -12,12 +13,12 @@ export default function NavBar() {
         </Link>
         <div className="flex justify-evenly items-center gap-x-8 text-lg font-semibold">
             <Link href="/">Home</Link>
-            <Link href="/">About</Link>
+            <Link href="/new-project">Create Project</Link>
             <Link href="/">Contact</Link>
         </div>
         <div className="flex justify-evenly items-center gap-x-6">
             <ModeToggle />
-            <Menu />
+            <ConnectButton />
         </div>
     </nav>
   )

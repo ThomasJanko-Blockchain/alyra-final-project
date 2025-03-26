@@ -3,6 +3,9 @@ import "./globals.css";
 import NavBar from "@/components/layouts/NavBar";
 import Footer from "@/components/layouts/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import '@rainbow-me/rainbowkit/styles.css';
+import Providers from "./providers";
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -32,11 +35,13 @@ export default function RootLayout({ children }) {
           enableSystem
           disableTransitionOnChange
         >
-            <NavBar />
-            <div className="p-8">
-              {children}
-            </div>
-            <Footer />
+            <Providers>
+                <NavBar />
+                <div className="p-8">
+                    {children}
+                </div>
+                <Footer />
+            </Providers>
         </ThemeProvider>
       </body>
     </html>
