@@ -2,7 +2,7 @@
 import { FilmIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -59,7 +59,7 @@ export default function ProjectPage() {
           </div>
           <h2 className='text-2xl font-bold mt-6'>About the Project</h2>
           <div className={`flex flex-col justify-start gap-6 max-w-[80vw] lg:max-w-[60vw] mt-6 rounded-lg p-4 ${theme === 'dark' ? 'bg-[#23262f]' : 'bg-gray-100'}`}>
-            <p className='text-gray-400'>"{project.description}"</p>
+            <p className='text-gray-400'>&quot;{project.description}&quot;</p>
             <div className='flex w-full justify-around gap-y-1'>
               <div className={`flex flex-col gap-y-1 rounded-lg p-4 ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#fbfbfb]'}`}>
                 <p className='text-sm text-gray-600'>Funding Goal</p>
