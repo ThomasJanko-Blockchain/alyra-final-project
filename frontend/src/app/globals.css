@@ -8,9 +8,10 @@
   }
 }
 
-
-
-
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
 
 
 
@@ -22,3 +23,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+.dark {
+  --background: #111827;
+  --foreground: #f7f8f9;
+}
+
+.light {
+  --background: #f7f8f9;
+  --foreground: #111827;
+}
+

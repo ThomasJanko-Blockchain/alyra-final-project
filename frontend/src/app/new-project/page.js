@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
-export default function page() {
+export default function NewProjectPage() {
 
     const { address } = useAccount();
     const [project, setProject] = useState({
