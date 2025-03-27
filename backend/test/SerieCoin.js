@@ -27,9 +27,11 @@ describe("SerieCoin", function () {
       expect(await serieCoin.symbol()).to.equal("SRC");
     });
 
-    it("Should start with zero total supply", async function () {
-      const { serieCoin } = await loadFixture(deploySerieCoinFixture);
-      expect(await serieCoin.totalSupply()).to.equal(0);
+    it("Should mint initial supply to deployer", async function () {
+      const { serieCoin, owner } = await loadFixture(deploySerieCoinFixture);
+      const expectedSupply = ethers.parseEther("1000000");
+      expect(await serieCoin.totalSupply()).to.equal(expectedSupply);
+      expect(await serieCoin.balanceOf(owner.address)).to.equal(expectedSupply);
     });
   });
 
@@ -53,38 +55,23 @@ describe("SerieCoin", function () {
   });
 
   describe("Burning", function () {
-    it("Should allow owner to burn tokens", async function () {
+    it("Should allow users to burn their own tokens", async function () {
       const { serieCoin, owner, addr1 } = await loadFixture(deploySerieCoinFixture);
       const mintAmount = ethers.parseEther("100");
       const burnAmount = ethers.parseEther("50");
       
       await serieCoin.mint(addr1.address, mintAmount);
-      await serieCoin.burn(addr1.address, burnAmount);
+      await serieCoin.connect(addr1).burn(burnAmount);
       
       expect(await serieCoin.balanceOf(addr1.address)).to.equal(mintAmount - burnAmount);
     });
 
-    it("Should fail if non-owner tries to burn", async function () {
-      const { serieCoin, owner, addr1 } = await loadFixture(deploySerieCoinFixture);
-      const mintAmount = ethers.parseEther("100");
-      const burnAmount = ethers.parseEther("50");
-      
-      await serieCoin.mint(addr1.address, mintAmount);
-      
-      await expect(
-        serieCoin.connect(addr1).burn(addr1.address, burnAmount)
-      ).to.be.revertedWithCustomError(serieCoin, "OwnableUnauthorizedAccount");
-    });
-
     it("Should fail if trying to burn more than balance", async function () {
-      const { serieCoin, owner, addr1 } = await loadFixture(deploySerieCoinFixture);
-      const mintAmount = ethers.parseEther("100");
+      const { serieCoin, addr1 } = await loadFixture(deploySerieCoinFixture);
       const burnAmount = ethers.parseEther("150");
       
-      await serieCoin.mint(addr1.address, mintAmount);
-      
       await expect(
-        serieCoin.burn(addr1.address, burnAmount)
+        serieCoin.connect(addr1).burn(burnAmount)
       ).to.be.revertedWithCustomError(serieCoin, "ERC20InsufficientBalance");
     });
   });
@@ -92,22 +79,18 @@ describe("SerieCoin", function () {
   describe("Transfers", function () {
     it("Should transfer tokens between accounts", async function () {
       const { serieCoin, owner, addr1, addr2 } = await loadFixture(deploySerieCoinFixture);
-      const mintAmount = ethers.parseEther("100");
       const transferAmount = ethers.parseEther("50");
       
-      await serieCoin.mint(addr1.address, mintAmount);
+      await serieCoin.transfer(addr1.address, transferAmount);
       await serieCoin.connect(addr1).transfer(addr2.address, transferAmount);
       
-      expect(await serieCoin.balanceOf(addr1.address)).to.equal(mintAmount - transferAmount);
+      expect(await serieCoin.balanceOf(addr1.address)).to.equal(0);
       expect(await serieCoin.balanceOf(addr2.address)).to.equal(transferAmount);
     });
 
     it("Should fail if sender doesn't have enough tokens", async function () {
-      const { serieCoin, owner, addr1, addr2 } = await loadFixture(deploySerieCoinFixture);
-      const mintAmount = ethers.parseEther("100");
+      const { serieCoin, addr1, addr2 } = await loadFixture(deploySerieCoinFixture);
       const transferAmount = ethers.parseEther("150");
-      
-      await serieCoin.mint(addr1.address, mintAmount);
       
       await expect(
         serieCoin.connect(addr1).transfer(addr2.address, transferAmount)

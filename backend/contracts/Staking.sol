@@ -1,46 +1,79 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./FractionalNFT.sol";
+import "./SerieProject.sol";
 
-// @title Staking
-// @notice Contrat pour le staking de SRC tokens
 contract Staking is Ownable(msg.sender) {
-    IERC20 public serieCoin;
-    FractionalNFT public fNFT;
-    uint256 public rewardRate;
-
-    mapping(address => uint256) public stakedBalances;
-    mapping(address => uint256) public rewardBalances;
-
-    constructor(address _serieCoin, address _fNFT, uint256 _rewardRate) {
-        serieCoin = IERC20(_serieCoin);
-        fNFT = FractionalNFT(_fNFT);
-        rewardRate = _rewardRate;
+    // Structure pour stocker les informations de staking
+    struct Stake {
+        uint256 amount;
+        uint256 startTime;
+        uint256 projectId;
+        bool isActive;
     }
 
-    // Permet aux investisseurs de staker leurs tokens SRC
-    function stake(uint256 amount) external {
-        require(amount > 0, "Cannot stake 0");
-        serieCoin.transferFrom(msg.sender, address(this), amount);
-        stakedBalances[msg.sender] += amount;
-        rewardBalances[msg.sender] += amount * rewardRate;
+    // Variables d'état
+    SerieProject public serieProject;
+    mapping(address => Stake[]) public stakes;
+    uint256 public constant STAKING_RATE = 5; // 5% de récompense
+    uint256 public constant STAKING_PERIOD = 365 days; // 1 an
+
+    // Événements
+    event Staked(address indexed user, uint256 indexed projectId, uint256 amount);
+    event Unstaked(address indexed user, uint256 indexed projectId, uint256 amount);
+
+    constructor(address _serieProjectAddress) {
+        serieProject = SerieProject(_serieProjectAddress);
     }
 
-    // Permet aux investisseurs de retirer leurs tokens stakés.
-    function withdraw(uint256 amount) external {
-        require(stakedBalances[msg.sender] >= amount, "Insufficient balance");
-        stakedBalances[msg.sender] -= amount;
-        serieCoin.transfer(msg.sender, amount);
+    // Fonction pour staker ses parts
+    function stake(uint256 _projectId, uint256 _amount) public {
+        require(_amount > 0, "Amount must be greater than 0");
+        
+        // Vérifier que l'utilisateur a les parts nécessaires
+        uint256 userShares = serieProject.getShares(_projectId, msg.sender);
+        require(userShares >= _amount, "Insufficient shares");
+
+        // Créer un nouveau stake
+        Stake memory newStake = Stake({
+            amount: _amount,
+            startTime: block.timestamp,
+            projectId: _projectId,
+            isActive: true
+        });
+
+        stakes[msg.sender].push(newStake);
+        emit Staked(msg.sender, _projectId, _amount);
     }
 
-    // Réclame les fNFT et autres récompenses accumulées grâce au staking.
-    function claimRewards() external {
-        uint256 reward = rewardBalances[msg.sender];
-        require(reward > 0, "No rewards to claim");
-        rewardBalances[msg.sender] = 0;
-        fNFT.transfer(msg.sender, reward);
+    // Fonction pour calculer les récompenses de staking
+    function calculateRewards(address _user, uint256 _stakeIndex) public view returns (uint256) {
+        Stake storage stake = stakes[_user][_stakeIndex];
+        require(stake.isActive, "Stake is not active");
+
+        uint256 timeStaked = block.timestamp - stake.startTime;
+        uint256 rewardRate = (STAKING_RATE * timeStaked) / STAKING_PERIOD;
+        return (stake.amount * rewardRate) / 100;
     }
-}
+
+    // Fonction pour unstaker ses parts
+    function unstake(uint256 _stakeIndex) public {
+        Stake storage stake = stakes[msg.sender][_stakeIndex];
+        require(stake.isActive, "Stake is not active");
+
+        // Vérifier que le projet est terminé
+        require(serieProject.getProjectStatus(stake.projectId) == SerieProject.ProjectStatus.Completed, "Project not completed");
+
+        // Calculer les récompenses
+        uint256 rewards = calculateRewards(msg.sender, _stakeIndex);
+
+        // Marquer le stake comme inactif
+        stake.isActive = false;
+
+        // Transférer les parts et les récompenses
+        // Note: Cette partie nécessiterait une implémentation supplémentaire pour gérer le transfert des tokens
+
+        emit Unstaked(msg.sender, stake.projectId, stake.amount);
+    }
+} 
