@@ -132,6 +132,7 @@ export default function ProjectPage() {
 
   const getProjectData = () => {
     if (projectData) {
+      console.log("projectData", projectData)
       setProject({
         title: projectData[0],
         description: projectData[1],
@@ -166,7 +167,12 @@ export default function ProjectPage() {
           <div>
             {/* TOP BAR  */}
             <div>
-              <img src={"https://placehold.co/600x400"} alt={project.title} className='w-32 h-32 bg-red-500 rounded-md object-cover'  />
+              <img src={project.tokenURI} className='w-32 h-32 rounded-md object-cover' style={{
+                backgroundImage: `url("https://placehold.co/600x400")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }} />
               <div className='flex justify-between items-center mt-6'>
                 <div>
                   <h2 className='text-4xl font-bold'>{project.title}</h2>

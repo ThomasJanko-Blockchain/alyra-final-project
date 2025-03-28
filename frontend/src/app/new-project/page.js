@@ -16,8 +16,8 @@ export default function NewProjectPage() {
         description: "",
         fundingGoal: 0,
         duration: 0,
-        tokenURI: "",
-        copyrightURI: ""
+        copyrightURI: "",
+        tokenURI: ""
     });
 
     const { data: hash, error, isPending, writeContract } = useWriteContract();
@@ -36,8 +36,8 @@ export default function NewProjectPage() {
                 description: "",
                 fundingGoal: 0,
                 duration: 0,
-                tokenURI: "",
-                copyrightURI: ""
+                copyrightURI: "",
+                tokenURI: ""
             })
         }
         if (error) {
@@ -63,7 +63,7 @@ export default function NewProjectPage() {
                 address: SerieProjectNFTAddress,
                 abi: SerieProjectNFTAbi,
                 functionName: 'createProject',
-                args: [project.title, project.description, project.fundingGoal, project.duration, project.tokenURI, project.copyrightURI],
+                args: [project.title, project.description, project.fundingGoal, project.duration, project.copyrightURI, project.tokenURI],
             });
          } catch (error) {
             toast.error(error.message);
