@@ -1,3 +1,9 @@
+export const ProjectStatus = {
+  0: "Waiting for funds",
+  1: "In production",
+  2: "Completed",
+}
+
 export const SerieCoinAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 export const SerieCoinAbi = [
     {

@@ -1,78 +1,213 @@
 'use client'
-import { FilmIcon } from 'lucide-react';
+import { BadgeDollarSignIcon, ChartPie, FilmIcon, LucideDollarSign, UserRoundIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAccount, useReadContract } from 'wagmi'
+import { SerieProjectNFTAddress, SerieProjectNFTAbi, ProjectStatus } from '@/utils/constants'
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 export default function ProjectPage() {
+  const { address } = useAccount();
   const { id } = useParams();
   const { theme } = useTheme();
+
+  const [investAmount, setInvestAmount] = useState(0);
+  const [projectShare, setProjectShare] = useState(0);
+
   const [project, setProject] = useState({
-    title: "First Project",
-    description: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos.",
-    owner: "0x1234567890123456789012345678901234567890",
-    fundingGoal: 100000,
-    duration: 10,
-    totalNFTs: 10000,
-    totalShares: 20,
-    expectedAPY: 5
+    title: "",
+    description: "",
+    fundingGoal: 0,
+    currentFunding: 0,
+    duration: 0,
+    startTime: 0,
+    producer: "",
+    status: "",
+    copyrightURI: "",
+    totalShares: 0,
+    tokenURI: "",
   });
+
+  const { data: projectData } = useReadContract({
+    address: SerieProjectNFTAddress,
+    abi: SerieProjectNFTAbi,
+    functionName: 'projects',
+    args: [id],
+  })
+
+  const { data: projectShares } = useReadContract({
+    address: SerieProjectNFTAddress,
+    abi: SerieProjectNFTAbi,
+    functionName: 'projectShares',
+    args: [id, address],
+  })
+
+  useEffect(() => {
+    if(projectShares) {
+      console.log("projectShares", projectShares)
+      setProjectShare(Number(projectShares))
+    }
+  }, [projectShares])
+
+  const handleInvest = (e) => {
+    e.preventDefault()
+    console.log("invest")
+    console.log("ProjectID", id)
+    console.log("InvestAmount", investAmount)
+  }
+
+
+  useEffect(() => {
+    console.log("projectData", projectData)
+    if (projectData) {
+      setProject({
+        title: projectData[0],
+        description: projectData[1],
+        fundingGoal: Number(projectData[2]),
+        currentFunding: Number(projectData[3]),
+        duration: Number(projectData[4]),
+        startTime: Number(projectData[5]),
+        producer: projectData[6],
+        status: ProjectStatus[projectData[7]],
+        copyrightURI: projectData[8],
+        totalShares: Number(projectData[9]),
+        tokenURI: projectData[10],
+      })
+    }
+  }, [projectData])
 
   return (
     <div className='flex flex-col gap-y-4 justify-center items-center mt-10 text-xl font-bold'>
-        <h1>Project Page</h1>
-        <div>
-          <h2 className='text-4xl font-bold'>{project.title}</h2>
-          <p className='text-xl mt-2 text-gray-600'>{project.owner.slice(0, 6)}...{project.owner.slice(-4)}</p>
-          <div className='flex justify-center w-full gap-x-6 items-center mt-6'>
+        {project.title && (
+          <div>
+            {/* TOP BAR  */}
+            <div>
+              <img src={"https://placehold.co/600x400"} alt={project.title} className='w-32 h-32 bg-red-500 rounded-md object-cover'  />
+              <div className='flex justify-between items-center mt-6'>
+                <div>
+                  <h2 className='text-4xl font-bold'>{project.title}</h2>
+                  <p className='text-xl mt-4 text-gray-400'>{project.producer.slice(0, 6)}...{project.producer.slice(-4)}</p>
+                </div>
+                <div className='flex justify-center items-center text-center text-lg text-gray-600 rounded-full bg-gray-200 w-fit py-1 px-3'>
+                  {project.status}
+                </div>
+              </div>
+
+            </div>
+           
+          <div className='flex justify-center w-full gap-y-6 gap-x-12 items-center mt-10'>
             <div className='flex gap-x-4'>
               <div className='flex justify-center items-center w-12 h-12 bg-gray-100 rounded-full'>
                 <FilmIcon className='w-6 h-6 text-gray-600' />
               </div>
               <div className='flex flex-col gap-y-1'>
-                <p className='text-sm text-gray-600'>Total NFTs</p>
-                <p className='text-xl font-bold'>{project.totalNFTs}</p>
+                <p className='text-sm text-gray-600'>Funding Goal</p>
+                <p className='text-xl font-bold'>{project.fundingGoal} $</p>
               </div>
             </div>
+
+            {/* current funding */}
+            <div className='flex gap-x-4'>
+              <div className='flex justify-center items-center w-12 h-12 bg-gray-100 rounded-full'>
+                <BadgeDollarSignIcon className='w-6 h-6 text-gray-600' />
+              </div>
+              <div className='flex flex-col gap-y-1'>
+                <p className='text-sm text-gray-600'>Current Funding</p>
+                <p className='text-xl font-bold'>{project.currentFunding} $</p>
+              </div>
+            </div>
+
             {/* total shares */}
             <div className='flex gap-x-4'>
               <div className='flex justify-center items-center w-12 h-12 bg-gray-100 rounded-full'>
-                <FilmIcon className='w-6 h-6 text-gray-600' />
+                <ChartPie className='w-6 h-6 text-gray-600' />
               </div>
               <div className='flex flex-col gap-y-1'>
                 <p className='text-sm text-gray-600'>Total Shares</p>
-                <p className='text-xl font-bold'>{project.totalShares}%</p>
+                <p className='text-xl font-bold'>{project.totalShares}</p>
               </div>
             </div>
+
+            {/* project share */}
+            <div className='flex gap-x-4'>
+              <div className='flex justify-center items-center w-12 h-12 bg-gray-100 rounded-full'>
+                <UserRoundIcon className='w-6 h-6 text-gray-600' />
+              </div>
+              <div className='flex flex-col gap-y-1'>
+                <p className='text-sm text-gray-600'>Your Shares</p>
+                <p className='text-xl font-bold'>{projectShare}</p>
+              </div>
+            </div>
+            
 
             <div className='flex gap-x-4'>
               <div className='flex justify-center items-center w-12 h-12 bg-gray-100 rounded-full'>
-                <FilmIcon className='w-6 h-6 text-gray-600' />
+                <LucideDollarSign className='w-6 h-6 text-gray-600' />
               </div>
               <div className='flex flex-col gap-y-1'>
                 <p className='text-sm text-gray-600'>Expected APY</p>
-                <p className='text-xl font-bold'>{project.expectedAPY}%</p>
+                <p className='text-xl font-bold'>5 %</p>
               </div>
-
-
             </div>
           </div>
-          <h2 className='text-2xl font-bold mt-6'>About the Project</h2>
-          <div className={`flex flex-col justify-start gap-6 max-w-[80vw] lg:max-w-[60vw] mt-6 rounded-lg p-4 ${theme === 'dark' ? 'bg-[#23262f]' : 'bg-gray-100'}`}>
+
+          <div className='flex justify-between items-center gap-x-4 mt-16'>
+          <h2 className='text-2xl font-bold '>About the Project</h2>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className='bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3'>
+                Invest
+              </Button>
+            </DialogTrigger>
+            <DialogContent className={`${theme === 'dark' ? 'bg-[#23262f]' : 'bg-gray-100'}`}>
+              <DialogHeader>
+                <DialogTitle>Invest in this project</DialogTitle>
+                <DialogDescription>
+                  Enter the amount you want to invest
+                </DialogDescription>
+              </DialogHeader>
+              <form className="space-y-4">
+                <div className='flex flex-col gap-y-2'>
+                  <Label htmlFor="amount">Amount (in $)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={investAmount}
+                    onChange={(e) => setInvestAmount(e.target.value)}
+                    placeholder="Enter investment amount"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" onClick={handleInvest}>Confirm Investment</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          </div>
+          <div className={`flex flex-col justify-start gap-6 max-w-[80vw] lg:max-w-[60vw] mt-6 rounded-lg p-6 ${theme === 'dark' ? 'bg-[#23262f]' : 'bg-gray-100'}`}>
             <p className='text-gray-400'>&quot;{project.description}&quot;</p>
             <div className='flex w-full justify-around gap-y-1'>
-              <div className={`flex flex-col gap-y-1 rounded-lg p-4 ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#fbfbfb]'}`}>
+              <div className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#fbfbfb]'}`}>
                 <p className='text-sm text-gray-600'>Funding Goal</p>
-                <p className='text-xl font-bold'>{project.fundingGoal}</p>
+                <p className='text-xl font-bold'>{project.fundingGoal} $</p>
               </div>
-              <div className={`flex flex-col gap-y-1 rounded-lg p-4 ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#f7f8f9]'}`}>
+              <div className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#f7f8f9]'}`}>
                 <p className='text-sm text-gray-600'>Duration</p>
                 <p className='text-xl font-bold'>{project.duration} days</p>
+              </div>
+              <div className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${theme === 'dark' ? 'bg-[#2d2f38]' : 'bg-[#f7f8f9]'}`}>
+                <p className='text-sm text-gray-600'>Copyright</p>
+                <p className='text-xl font-bold'>{project.copyrightURI}</p>
               </div>
               
             </div>
           </div>
         </div>
+      )}
     </div>
   )
 }
