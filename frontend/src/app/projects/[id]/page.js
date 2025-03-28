@@ -3,12 +3,13 @@ import { BadgeDollarSignIcon, ChartPie, FilmIcon, LucideDollarSign, UserRoundIco
 import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react'
-import { useAccount, useReadContract } from 'wagmi'
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { SerieProjectNFTAddress, SerieProjectNFTAbi, ProjectStatus } from '@/utils/constants'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 export default function ProjectPage() {
   const { address } = useAccount();
@@ -17,7 +18,8 @@ export default function ProjectPage() {
 
   const [investAmount, setInvestAmount] = useState(0);
   const [projectShare, setProjectShare] = useState(0);
-
+  const [investDialogOpen, setInvestDialogOpen] = useState(false);
+  
   const [project, setProject] = useState({
     title: "",
     description: "",
@@ -32,19 +34,22 @@ export default function ProjectPage() {
     tokenURI: "",
   });
 
-  const { data: projectData } = useReadContract({
+  const { data: projectData, refetch: refetchProjectData } = useReadContract({
     address: SerieProjectNFTAddress,
     abi: SerieProjectNFTAbi,
     functionName: 'projects',
     args: [id],
   })
 
-  const { data: projectShares } = useReadContract({
+  const { data: projectShares, refetch: refetchProjectShares } = useReadContract({
     address: SerieProjectNFTAddress,
     abi: SerieProjectNFTAbi,
     functionName: 'projectShares',
     args: [id, address],
   })
+
+  const { data: hash, error, isPending, writeContract } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
 
   useEffect(() => {
     if(projectShares) {
@@ -53,16 +58,44 @@ export default function ProjectPage() {
     }
   }, [projectShares])
 
-  const handleInvest = (e) => {
+  const handleInvest = async (e) => {
     e.preventDefault()
-    console.log("invest")
-    console.log("ProjectID", id)
-    console.log("InvestAmount", investAmount)
+    try {
+      await writeContract({
+        address: SerieProjectNFTAddress,
+        abi: SerieProjectNFTAbi,
+        functionName: 'investInProject',
+        args: [id, investAmount],
+      })
+    } catch (err) {
+      console.error("Investment failed:", err)
+    }
   }
 
+  const refreshData = async () => {
+    await Promise.all([
+      refetchProjectData(),
+      refetchProjectShares()
+    ])
+  }
 
   useEffect(() => {
-    console.log("projectData", projectData)
+    if(isConfirmed) {
+      toast.success("Transaction confirmed", {
+        description: `Hash: ${hash}`
+      })
+      setInvestDialogOpen(false)
+      refreshData()
+      setInvestAmount(0)
+    }
+    if(error) {
+      toast.error("Transaction failed", {
+        description: error.shortMessage || error.message
+      })
+    }
+  }, [isConfirmed, error])
+
+  const getProjectData = () => {
     if (projectData) {
       setProject({
         title: projectData[0],
@@ -78,6 +111,10 @@ export default function ProjectPage() {
         tokenURI: projectData[10],
       })
     }
+  }
+
+  useEffect(() => {
+    getProjectData()
   }, [projectData])
 
   return (
@@ -157,9 +194,9 @@ export default function ProjectPage() {
 
           <div className='flex justify-between items-center gap-x-4 mt-16'>
           <h2 className='text-2xl font-bold '>About the Project</h2>
-          <Dialog>
+          <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
             <DialogTrigger asChild>
-              <Button className='bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3'>
+              <Button className='bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600'>
                 Invest
               </Button>
             </DialogTrigger>
