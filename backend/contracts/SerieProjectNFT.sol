@@ -19,7 +19,6 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         string copyrightURI; // URI vers les métadonnées du droit d'auteur
         uint256 totalShares; // Nombre total de parts (10000 = 100%)
         string tokenURI;
-        mapping(address => uint256) shares; // Mapping to track investor shares
     }
 
     // Énumération des différents statuts d'un projet
@@ -34,11 +33,16 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     Project[] public projects;
     uint256 public projectCount;
     
+    // Mapping pour suivre les parts de chaque investisseur
+    // projectId => (address => shares)
+    mapping(uint256 => mapping(address => uint256)) public projectShares;
+    
     // Événements
     event ProjectCreated(uint256 indexed projectId, string title, address producer);
-    event ProjectFunded(uint256 indexed projectId, address investor, uint256 amount);
+    event ProjectFunded(uint256 indexed projectId, address investor, uint256 amount, uint256 shares);
     event ProjectStatusChanged(uint256 indexed projectId, ProjectStatus newStatus);
     event CopyrightRegistered(uint256 indexed projectId, string copyrightURI);
+    event SharesTransferred(uint256 indexed projectId, address from, address to, uint256 shares);
 
     constructor(address _serieCoinAddress) ERC721("SerieProject", "SP") {
         serieCoin = SerieCoin(_serieCoinAddress);
@@ -70,6 +74,9 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         // Mint the NFT to the producer
         _mint(msg.sender, projectCount);
 
+        // Give initial shares to the producer
+        projectShares[projectCount][msg.sender] = newProject.totalShares;
+
         emit ProjectCreated(projectCount, _title, msg.sender);
         emit CopyrightRegistered(projectCount, _copyrightURI);
         projectCount++;
@@ -86,9 +93,14 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         // Transfert des tokens
         require(serieCoin.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
         
-        // Calculate and update shares
-        uint256 sharesToAdd = (_amount * project.totalShares) / project.fundingGoal;
-        project.shares[msg.sender] += sharesToAdd;
+        // Calcul des parts à attribuer
+        uint256 sharesToMint = (_amount * project.totalShares) / project.fundingGoal;
+        
+        // Transfer shares from producer to investor
+        require(projectShares[_projectId][project.producer] >= sharesToMint, "Producer has insufficient shares");
+        projectShares[_projectId][project.producer] -= sharesToMint;
+        projectShares[_projectId][msg.sender] += sharesToMint;
+        
         project.currentFunding += _amount;
 
         // Si le projet est entièrement financé, on passe en production
@@ -98,7 +110,31 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
             emit ProjectStatusChanged(_projectId, ProjectStatus.InProduction);
         }
 
-        emit ProjectFunded(_projectId, msg.sender, _amount);
+        emit ProjectFunded(_projectId, msg.sender, _amount, sharesToMint);
+    }
+
+    // Fonction pour transférer des parts
+    function transferShares(uint256 _projectId, address _to, uint256 _shares) public {
+        require(_projectId < projects.length, "Project does not exist");
+        require(_shares > 0, "Amount must be greater than 0");
+        require(projectShares[_projectId][msg.sender] >= _shares, "Insufficient shares");
+
+        projectShares[_projectId][msg.sender] -= _shares;
+        projectShares[_projectId][_to] += _shares;
+
+        emit SharesTransferred(_projectId, msg.sender, _to, _shares);
+    }
+
+    // Fonction pour obtenir les parts d'un investisseur
+    // function getShares(uint256 _projectId, address _investor) public view returns (uint256) {
+    //     require(_projectId < projects.length, "Project does not exist");
+    //     return projectShares[_projectId][_investor];
+    // }
+
+    // Fonction pour obtenir le pourcentage de parts d'un investisseur
+    function getSharePercentage(uint256 _projectId, address _investor) public view returns (uint256) {
+        require(_projectId < projects.length, "Project does not exist");
+        return (projectShares[_projectId][_investor] * 100) / projects[_projectId].totalShares;
     }
 
     function forceCompleteProject(uint256 _projectId) public onlyOwner {
@@ -136,11 +172,5 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     function getProjectStatus(uint256 _projectId) public view returns (ProjectStatus) {
         require(_projectId < projects.length, "Project does not exist");
         return projects[_projectId].status;
-    }
-
-    // Fonction pour obtenir les parts d'un investisseur dans un projet
-    function getShares(uint256 _projectId, address _investor) public view returns (uint256) {
-        require(_projectId < projects.length, "Project does not exist");
-        return projects[_projectId].shares[_investor];
     }
 } 
