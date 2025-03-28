@@ -1,44 +1,76 @@
 "use client";
 // import { publicClient } from '@/utils/client';
-// import { useMutation } from '@tanstack/react-query';
-import React, { useState } from 'react'
-import { useAccount } from 'wagmi';
+import React, { useEffect, useState } from 'react'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner"
+import { SerieProjectNFTAbi, SerieProjectNFTAddress } from '@/utils/constants';
 
 export default function NewProjectPage() {
-
     const { address } = useAccount();
     const [project, setProject] = useState({
         title: "",
         description: "",
         fundingGoal: 0,
         duration: 0,
+        tokenURI: "",
+        copyrightURI: ""
     });
+
+    const { data: hash, error, isPending, writeContract } = useWriteContract();
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
+
+
+    useEffect(() => {
+        // if (isPending) {
+        //     toast.loading("Creating project...")
+        // }
+        if (isConfirmed) {
+            toast.success(`Project created successfully. 
+              Hash: ${hash}`)
+            setProject({
+                title: "",
+                description: "",
+                fundingGoal: 0,
+                duration: 0,
+                tokenURI: "",
+                copyrightURI: ""
+            })
+        }
+        if (error) {
+          toast.error(error.shortMessage || error.message)
+        }
+        
+    }, [isConfirmed, error])
 
     if (!address) {
         return <div className='flex flex-col gap-y-4 justify-center items-center mt-10 text-xl font-bold'>Please connect your wallet to create a new project</div>
     }
 
-    // const { mutate: createProject } = useMutation({
-    //     mutationFn: async (data) => {
-    //         const { title, description, fundingGoal, duration } = data;
-    //         const { data: project } = await publicClient.writeContract({
-    //             address: projectRegistryAddress,
-    //             abi: projectRegistryAbi,
-    //             functionName: 'submitProject',
-    //             args: [title, description, fundingGoal, duration],
-    //         });
-    //         return project;
-    //     },
-    // });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log(project);
+        if (!project.title || !project.description || !project.fundingGoal || !project.duration || !project.tokenURI || !project.copyrightURI) {
+            toast.error("Please fill all the fields");
+            return;
+        }
+        
+         try {
+            writeContract({
+                address: SerieProjectNFTAddress,
+                abi: SerieProjectNFTAbi,
+                functionName: 'createProject',
+                args: [project.title, project.description, project.fundingGoal, project.duration, project.tokenURI, project.copyrightURI],
+            });
+         } catch (error) {
+            toast.error(error.message);
+         }
     }
+
+    
     
 
   return (
@@ -50,7 +82,14 @@ export default function NewProjectPage() {
         <form className='flex flex-col gap-y-6 w-full max-w-md mt-6'>
             <div className='flex flex-col gap-y-2'>
                 <Label htmlFor='title'>Title</Label>
-                <Input type='text' id='title' name='title' placeholder="Enter project title" value={project.title} onChange={(e) => setProject({ ...project, title: e.target.value })} />
+                <Input 
+                    type='text' 
+                    id='title' 
+                    name='title' 
+                    placeholder="Enter project title" 
+                    value={project.title} 
+                    onChange={(e) => setProject({ ...project, title: e.target.value })} 
+                />
             </div>
             <div className='flex flex-col gap-y-2'>
                 <Label htmlFor='description'>Description</Label>
@@ -64,12 +103,12 @@ export default function NewProjectPage() {
                 />
             </div>
             <div className='flex flex-col gap-y-2'>
-                <Label htmlFor='fundingGoal'>Funding Goal</Label>
+                <Label htmlFor='fundingGoal'>Funding Goal (in SRC)</Label>
                 <Input 
                     type='number' 
                     id='fundingGoal' 
                     name='fundingGoal' 
-                    placeholder="Enter amount in USDC"
+                    placeholder="Enter amount in SRC"
                     value={project.fundingGoal}
                     onChange={(e) => setProject({ ...project, fundingGoal: e.target.value })}
                 />
@@ -85,7 +124,36 @@ export default function NewProjectPage() {
                     onChange={(e) => setProject({ ...project, duration: e.target.value })}
                 />
             </div>
-            <Button type='submit' className="w-full bg-blue-500 text-white" onClick={handleSubmit}>Create Project</Button>
+            <div className='flex flex-col gap-y-2'>
+                <Label htmlFor='tokenURI'>Token URI</Label>
+                <Input 
+                    type='text' 
+                    id='tokenURI' 
+                    name='tokenURI' 
+                    placeholder="Enter IPFS URI for project metadata"
+                    value={project.tokenURI}
+                    onChange={(e) => setProject({ ...project, tokenURI: e.target.value })}
+                />
+            </div>
+            <div className='flex flex-col gap-y-2'>
+                <Label htmlFor='copyrightURI'>Copyright URI</Label>
+                <Input 
+                    type='text' 
+                    id='copyrightURI' 
+                    name='copyrightURI' 
+                    placeholder="Enter IPFS URI for copyright metadata"
+                    value={project.copyrightURI}
+                    onChange={(e) => setProject({ ...project, copyrightURI: e.target.value })}
+                />
+            </div>
+            <Button 
+                type='submit' 
+                className="w-full bg-blue-500 text-white" 
+                onClick={handleSubmit}
+                disabled={isPending}
+            >
+                {isPending ? "Creating Project..." : "Create Project"}
+            </Button>
         </form>
     </div>
   )

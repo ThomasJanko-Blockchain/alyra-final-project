@@ -5,6 +5,7 @@ import Footer from "@/components/layouts/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import '@rainbow-me/rainbowkit/styles.css';
 import Providers from "./providers";
+import { Toaster } from "@/components/ui/sonner"
 
 
 const geistSans = localFont({
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
                     {children}
                 </div>
                 <Footer />
+                <Toaster position="top-center" richColors />
             </Providers>
         </ThemeProvider>
       </body>
