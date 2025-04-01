@@ -38,7 +38,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     mapping(uint256 => mapping(address => uint256)) public projectShares;
     
     // Événements
-    event ProjectCreated(uint256 indexed projectId, string title, address producer);
+    event ProjectCreated(uint256 indexed projectId, string title, address producer, string tokenURI);
     event ProjectFunded(uint256 indexed projectId, address investor, uint256 amount, uint256 shares);
     event ProjectStatusChanged(uint256 indexed projectId, ProjectStatus newStatus);
     event CopyrightRegistered(uint256 indexed projectId, string copyrightURI);
@@ -77,7 +77,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         // Give initial shares to the producer
         projectShares[projectCount][msg.sender] = newProject.totalShares;
 
-        emit ProjectCreated(projectCount, _title, msg.sender);
+        emit ProjectCreated(projectCount, _title, msg.sender, _tokenURI);
         emit CopyrightRegistered(projectCount, _copyrightURI);
         projectCount++;
     }
