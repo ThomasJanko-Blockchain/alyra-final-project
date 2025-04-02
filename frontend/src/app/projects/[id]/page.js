@@ -90,7 +90,7 @@ export default function ProjectPage() {
       abi: SerieProjectNFTAbi,
       functionName: "projectShares",
       args: [id, address],
-      enabled: isConnected && !!address,
+      enabled: !!address,
     });
 
   const { data: hash, error, isPending, writeContract } = useWriteContract();
@@ -99,10 +99,9 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (projectShares) {
-      console.log("projectShares", projectShares);
       setProjectShare(Number(projectShares));
     }
-  }, [projectShares]);
+  }, [projectShares, refetchProjectShares]);
 
   const handleInvest = async (e) => {
     e.preventDefault();
@@ -124,7 +123,7 @@ export default function ProjectPage() {
         return;
       }
       // First approve the contract to spend tokens
-      await writeContract({
+      writeContract({
         address: SerieCoinAddress,
         abi: SerieCoinAbi,
         functionName: "approve",
@@ -132,7 +131,7 @@ export default function ProjectPage() {
       });
 
       // Then invest in the project
-      await writeContract({
+      writeContract({
         address: SerieProjectNFTAddress,
         abi: SerieProjectNFTAbi,
         functionName: "investInProject",
@@ -151,7 +150,7 @@ export default function ProjectPage() {
       return;
     }
     try {
-      await writeContract({
+      writeContract({
         address: SerieProjectNFTAddress,
         abi: SerieProjectNFTAbi,
         functionName: "transferShares",
@@ -163,7 +162,8 @@ export default function ProjectPage() {
   };
 
   const refreshData = async () => {
-    if (!isConnected) return;
+    console.log("refreshing data");
+    if (!address) return;
     await Promise.all([
       refetchProjectData(),
       refetchProjectShares(),
@@ -178,12 +178,12 @@ export default function ProjectPage() {
       });
       setInvestDialogOpen(false);
       setTransferDialogOpen(false);
-      refreshData();
       setInvestAmount(0);
       setTransfer({
         address: "",
         amount: 0,
       });
+      refreshData();
     }
     if (error) {
       toast.error("Transaction failed", {
@@ -194,7 +194,7 @@ export default function ProjectPage() {
 
   const getProjectData = () => {
     if (projectData) {
-      console.log("projectData", projectData);
+      // console.log("projectData", projectData);
       setProject({
         title: projectData[0],
         description: projectData[1],
@@ -211,6 +211,15 @@ export default function ProjectPage() {
     }
   };
 
+  const handleClaim = async () => {
+    writeContract({
+      address: SerieProjectNFTAddress,
+      abi: SerieProjectNFTAbi,
+      functionName: "claimRefund",
+      args: [id],
+    });
+  };
+  
   useEffect(() => {
     getProjectData();
   }, [projectData]);
@@ -381,70 +390,85 @@ export default function ProjectPage() {
 
           <div className="flex justify-between items-center gap-x-4 mt-16">
             <h2 className="text-2xl font-bold ">About the Project</h2>
-            <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600">
-                  Invest
-                </Button>
-              </DialogTrigger>
-              <DialogContent
-                className={`${
-                  theme === "dark" ? "bg-[#23262f]" : "bg-gray-100"
-                }`}
-              >
-                <DialogHeader>
-                  <DialogTitle>Invest in this project</DialogTitle>
-                  <DialogDescription>
-                    Enter the amount you want to invest
-                  </DialogDescription>
-                </DialogHeader>
-                <form className="space-y-4">
-                  <div className="flex flex-col gap-y-2">
-                    <Label htmlFor="amount">Amount (in $SRC)</Label>
-                    <div className="flex gap-x-2">
-                      <Input
-                        id="amount"
-                        type="number"
-                        value={investAmount}
-                        onChange={(e) => setInvestAmount(e.target.value)}
-                        placeholder="Enter investment amount"
-                        max={project.fundingGoal - project.currentFunding}
-                      />
+            {project.status === "Waiting for funds" && (
+              <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600">
+                    Invest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  className={`${
+                    theme === "dark" ? "bg-[#23262f]" : "bg-gray-100"
+                  }`}
+                >
+                  <DialogHeader>
+                    <DialogTitle>Invest in this project</DialogTitle>
+                    <DialogDescription>
+                      Enter the amount you want to invest
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form className="space-y-4">
+                    <div className="flex flex-col gap-y-2">
+                      <Label htmlFor="amount">Amount (in $SRC)</Label>
+                      <div className="flex gap-x-2">
+                        <Input
+                          id="amount"
+                          type="number"
+                          value={investAmount}
+                          onChange={(e) => setInvestAmount(e.target.value)}
+                          placeholder="Enter investment amount"
+                          max={project.fundingGoal - project.currentFunding}
+                        />
 
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          setInvestAmount(
-                            project.fundingGoal - project.currentFunding
-                          )
-                        }
-                        className="whitespace-nowrap bg-orange-500 text-white"
-                      >
-                        Max
-                      </Button>
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            setInvestAmount(
+                              project.fundingGoal - project.currentFunding
+                            )
+                          }
+                          className="whitespace-nowrap bg-orange-500 text-white"
+                        >
+                          Max
+                        </Button>
+                      </div>
+                      {project.fundingGoal - project.currentFunding <
+                        investAmount && (
+                        <p className="text-red-500">
+                          You can't invest more than the funding goal
+                        </p>
+                      )}
                     </div>
-                    {project.fundingGoal - project.currentFunding <
-                      investAmount && (
-                      <p className="text-red-500">
-                        You can't invest more than the funding goal
-                      </p>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" onClick={handleInvest}>
-                      Confirm Investment
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <DialogFooter>
+                      <Button type="submit" onClick={handleInvest}>
+                        Confirm Investment
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+            {project.status === "Completed" && (
+              <Button 
+                className="bg-green-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600"
+                onClick={handleClaim}
+              >
+                Claim Funds
+              </Button>
+            )}
           </div>
           <div
             className={`flex flex-col justify-start gap-6 mt-6 rounded-lg p-6 ${
               theme === "dark" ? "bg-[#23262f]" : "bg-gray-100"
             }`}
           >
-            <p className="text-gray-400">&quot;{project.description}&quot;</p>
+            <p className="text-gray-400">{project.description?.split('\n').map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < project.description.split('\n').length - 1 && <br />}
+              </span>
+            ))}</p>
             <div className="flex flex-wrap w-full justify-around gap-3">
               <div
                 className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${
@@ -468,7 +492,9 @@ export default function ProjectPage() {
                 }`}
               >
                 <p className="text-sm text-gray-600">Copyright</p>
-                <p className="text-xl font-bold">{project.copyrightURI}</p>
+                <p className="text-xl font-bold text-ellipsis overflow-hidden">
+                  {project.copyrightURI}
+                </p>
               </div>
             </div>
           </div>

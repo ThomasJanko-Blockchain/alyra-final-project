@@ -13,7 +13,8 @@ export default function ProjectsList() {
     const projectCreatedEvents = await publicClient.getLogs({
       address: SerieProjectNFTAddress,
       event: parseAbiItem(
-        "event ProjectCreated(uint256 indexed projectId, string title, address producer, string tokenURI)"
+        "event ProjectCreated(uint256 indexed projectId, string title, address indexed producer, string tokenURI)"
+        // "event ProjectCreated(uint256 indexed projectId, string title, address producer, string tokenURI)"
       ),
       fromBlock: 0n,
       toBlock: "latest",
@@ -63,8 +64,8 @@ export default function ProjectsList() {
               backgroundRepeat: "no-repeat",
             }}
           />
-          <h3 className="text-lg font-bold">{project.title}</h3>
-          <p className="text-gray-600 dark:text-gray-300">
+          <h3 className="text-lg font-bold mt-2">{project.title}</h3>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">
             Producer: {project.producer.slice(0, 6)}...
             {project.producer.slice(-6)}
           </p>

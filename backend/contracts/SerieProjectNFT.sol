@@ -10,15 +10,16 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     struct Project {
         string title;
         string description;
-        uint256 fundingGoal;
-        uint256 currentFunding;
-        uint256 duration; // en jours
-        uint256 startTime;
+        uint96 fundingGoal; // Optimized from uint256 to uint96 for sufficient range
+        uint96 currentFunding;
+        uint32 duration; // en jours - uint32 sufficient for days
+        uint32 startTime;
         address producer;
         ProjectStatus status;
-        string copyrightURI; // URI vers les métadonnées du droit d'auteur
-        uint256 totalShares; // Nombre total de parts (10000 = 100%)
+        string copyrightURI;
+        uint16 totalShares; // 10000 max so uint16 is sufficient
         string tokenURI;
+        bool refundClaimed; // Track if refund has been claimed
     }
 
     // Énumération des différents statuts d'un projet
@@ -29,37 +30,50 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     }
 
     // Variables d'état
-    SerieCoin public serieCoin;
+    SerieCoin private immutable serieCoin;
     Project[] public projects;
-    uint256 public projectCount;
+    uint32 public projectCount;
     
     // Mapping pour suivre les parts de chaque investisseur
     // projectId => (address => shares)
-    mapping(uint256 => mapping(address => uint256)) public projectShares;
+    mapping(uint256 => mapping(address => uint16)) public projectShares;
     
     // Événements
-    event ProjectCreated(uint256 indexed projectId, string title, address producer, string tokenURI);
-    event ProjectFunded(uint256 indexed projectId, address investor, uint256 amount, uint256 shares);
+    event ProjectCreated(uint256 indexed projectId, string title, address indexed producer, string tokenURI);
+    event ProjectFunded(uint256 indexed projectId, address indexed investor, uint96 amount, uint16 shares);
     event ProjectStatusChanged(uint256 indexed projectId, ProjectStatus newStatus);
     event CopyrightRegistered(uint256 indexed projectId, string copyrightURI);
-    event SharesTransferred(uint256 indexed projectId, address from, address to, uint256 shares);
+    event SharesTransferred(uint256 indexed projectId, address indexed from, address indexed to, uint16 shares);
+    event RefundClaimed(uint256 indexed projectId, address indexed investor, uint96 amount);
+
+    // Modifier to check if project exists
+    modifier projectExists(uint256 _projectId) {
+        require(_projectId < projects.length, "Project does not exist");
+        _;
+    }
 
     constructor(address _serieCoinAddress) ERC721("SerieProject", "SP") {
+        require(_serieCoinAddress != address(0), "Invalid SerieCoin address");
         serieCoin = SerieCoin(_serieCoinAddress);
     }
 
     // Fonction pour créer un nouveau projet
     function createProject(
-        string memory _title,
-        string memory _description,
-        uint256 _fundingGoal,
-        uint256 _duration,
-        string memory _copyrightURI,
-        string memory _tokenURI
-    ) public {
+        string calldata _title,
+        string calldata _description,
+        uint96 _fundingGoal,
+        uint32 _duration,
+        string calldata _copyrightURI,
+        string calldata _tokenURI
+    ) external {
         require(_fundingGoal > 0, "Funding goal must be greater than 0");
-        require(_duration > 0, "Duration must be greater than 0");
+        require(_duration > 0 && _duration <= 3650, "Invalid duration"); // Max 10 years
+        require(bytes(_title).length > 0 && bytes(_title).length <= 200, "Invalid title length");
+        require(bytes(_description).length > 0, "Invalid description length");
+        require(bytes(_copyrightURI).length > 0, "Copyright URI cannot be empty");
+        require(bytes(_tokenURI).length > 0, "Token URI cannot be empty");
 
+        uint32 newProjectId = projectCount;
         Project storage newProject = projects.push();
         newProject.title = _title;
         newProject.description = _description;
@@ -70,21 +84,24 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         newProject.copyrightURI = _copyrightURI;
         newProject.totalShares = 10000; // 100% des parts
         newProject.tokenURI = _tokenURI;
+        newProject.refundClaimed = false;
 
         // Mint the NFT to the producer
-        _mint(msg.sender, projectCount);
+        _mint(msg.sender, newProjectId);
 
         // Give initial shares to the producer
-        projectShares[projectCount][msg.sender] = newProject.totalShares;
+        projectShares[newProjectId][msg.sender] = 10000;
 
-        emit ProjectCreated(projectCount, _title, msg.sender, _tokenURI);
-        emit CopyrightRegistered(projectCount, _copyrightURI);
-        projectCount++;
+        emit ProjectCreated(newProjectId, _title, msg.sender, _tokenURI);
+        emit CopyrightRegistered(newProjectId, _copyrightURI);
+        
+        unchecked {
+            projectCount++;
+        }
     }
 
     // Fonction pour investir dans un projet
-    function investInProject(uint256 _projectId, uint256 _amount) public {
-        require(_projectId < projects.length, "Project does not exist");
+    function investInProject(uint256 _projectId, uint96 _amount) external projectExists(_projectId) {
         Project storage project = projects[_projectId];
         require(project.status == ProjectStatus.WaitingForFunds, "Project not in funding phase");
         require(_amount > 0, "Amount must be greater than 0");
@@ -94,19 +111,21 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         require(serieCoin.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
         
         // Calcul des parts à attribuer
-        uint256 sharesToMint = (_amount * project.totalShares) / project.fundingGoal;
+        uint16 sharesToMint = uint16((_amount * uint256(project.totalShares)) / project.fundingGoal);
         
         // Transfer shares from producer to investor
         require(projectShares[_projectId][project.producer] >= sharesToMint, "Producer has insufficient shares");
-        projectShares[_projectId][project.producer] -= sharesToMint;
-        projectShares[_projectId][msg.sender] += sharesToMint;
         
-        project.currentFunding += _amount;
+        unchecked {
+            projectShares[_projectId][project.producer] -= sharesToMint;
+            projectShares[_projectId][msg.sender] += sharesToMint;
+            project.currentFunding += _amount;
+        }
 
         // Si le projet est entièrement financé, on passe en production
         if (project.currentFunding >= project.fundingGoal) {
             project.status = ProjectStatus.InProduction;
-            project.startTime = block.timestamp;
+            project.startTime = uint32(block.timestamp);
             emit ProjectStatusChanged(_projectId, ProjectStatus.InProduction);
         }
 
@@ -114,31 +133,26 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     }
 
     // Fonction pour transférer des parts
-    function transferShares(uint256 _projectId, address _to, uint256 _shares) public {
-        require(_projectId < projects.length, "Project does not exist");
+    function transferShares(uint256 _projectId, address _to, uint16 _shares) external projectExists(_projectId) {
+        require(_to != address(0), "Invalid recipient");
         require(_shares > 0, "Amount must be greater than 0");
         require(projectShares[_projectId][msg.sender] >= _shares, "Insufficient shares");
 
-        projectShares[_projectId][msg.sender] -= _shares;
-        projectShares[_projectId][_to] += _shares;
+        unchecked {
+            projectShares[_projectId][msg.sender] -= _shares;
+            projectShares[_projectId][_to] += _shares;
+        }
 
         emit SharesTransferred(_projectId, msg.sender, _to, _shares);
     }
 
-    // Fonction pour obtenir les parts d'un investisseur
-    // function getShares(uint256 _projectId, address _investor) public view returns (uint256) {
-    //     require(_projectId < projects.length, "Project does not exist");
-    //     return projectShares[_projectId][_investor];
-    // }
-
     // Fonction pour obtenir le pourcentage de parts d'un investisseur
-    function getSharePercentage(uint256 _projectId, address _investor) public view returns (uint256) {
-        require(_projectId < projects.length, "Project does not exist");
-        return (projectShares[_projectId][_investor] * 100) / projects[_projectId].totalShares;
+    function getSharePercentage(uint256 _projectId, address _investor) external view projectExists(_projectId) returns (uint256) {
+        return (uint256(projectShares[_projectId][_investor]) * 100) / projects[_projectId].totalShares;
     }
 
-    function forceCompleteProject(uint256 _projectId) public onlyOwner {
-        require(_projectId < projects.length, "Project does not exist");
+    // Fonction pour forcer la fin d'un projet
+    function forceCompleteProject(uint256 _projectId) external onlyOwner projectExists(_projectId) {
         Project storage project = projects[_projectId];
         require(project.status == ProjectStatus.InProduction, "Project not in production");
         project.status = ProjectStatus.Completed;
@@ -146,31 +160,44 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     }
 
     // Fonction pour marquer un projet comme terminé
-    function completeProject(uint256 _projectId) public {
-        require(_projectId < projects.length, "Project does not exist");
+    function completeProject(uint256 _projectId) external projectExists(_projectId) {
         Project storage project = projects[_projectId];
         require(project.producer == msg.sender, "Only producer can complete project");
         require(project.status == ProjectStatus.InProduction, "Project not in production");
-        require(block.timestamp >= project.startTime + (project.duration * 1 days), "Project duration not reached");
+        require(block.timestamp >= project.startTime + (uint256(project.duration) * 1 days), "Project duration not reached");
 
         project.status = ProjectStatus.Completed;
         emit ProjectStatusChanged(_projectId, ProjectStatus.Completed);
     }
 
     // Fonction pour obtenir l'URI du token
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(tokenId < projects.length, "Project does not exist");
+    function tokenURI(uint256 tokenId) public view override projectExists(tokenId) returns (string memory) {
         return projects[tokenId].tokenURI;
     }
 
     // Fonction pour obtenir l'URI du droit d'auteur
-    function getCopyrightURI(uint256 _projectId) public view returns (string memory) {
-        require(_projectId < projects.length, "Project does not exist");
+    function getCopyrightURI(uint256 _projectId) external view projectExists(_projectId) returns (string memory) {
         return projects[_projectId].copyrightURI;
     }
 
-    function getProjectStatus(uint256 _projectId) public view returns (ProjectStatus) {
-        require(_projectId < projects.length, "Project does not exist");
+    function getProjectStatus(uint256 _projectId) external view projectExists(_projectId) returns (ProjectStatus) {
         return projects[_projectId].status;
     }
-} 
+
+    // Fonction pour réclamer le remboursement une fois le projet terminé
+    function claimRefund(uint256 _projectId) external projectExists(_projectId) {
+        Project storage project = projects[_projectId];
+        require(project.status == ProjectStatus.Completed, "Project not completed");
+        require(!project.refundClaimed, "Refund already claimed");
+        require(projectShares[_projectId][msg.sender] > 0, "No shares to claim refund for");
+
+        uint16 shares = projectShares[_projectId][msg.sender];
+        uint96 refundAmount = uint96((uint256(shares) * uint256(project.currentFunding)) / project.totalShares);
+
+        projectShares[_projectId][msg.sender] = 0;
+
+        require(serieCoin.transfer(msg.sender, refundAmount), "Refund transfer failed");
+
+        emit RefundClaimed(_projectId, msg.sender, refundAmount);
+    }
+}
