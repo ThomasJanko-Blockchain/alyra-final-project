@@ -101,7 +101,7 @@ export default function ProjectPage() {
     if (projectShares) {
       setProjectShare(Number(projectShares));
     }
-  }, [projectShares, refetchProjectShares]);
+  }, [projectShares]);
 
   const handleInvest = async (e) => {
     e.preventDefault();
@@ -196,17 +196,17 @@ export default function ProjectPage() {
     if (projectData) {
       // console.log("projectData", projectData);
       setProject({
-        title: projectData[0],
-        description: projectData[1],
-        fundingGoal: Number(projectData[2]),
-        currentFunding: Number(projectData[3]),
-        duration: Number(projectData[4]),
-        startTime: Number(projectData[5]),
+        fundingGoal: Number(projectData[0]),
+        currentFunding: Number(projectData[1]),
+        duration: Number(projectData[2]),
+        startTime: Number(projectData[3]),
+        totalShares: Number(projectData[4]),
         producer: projectData[6],
         status: ProjectStatus[projectData[7]],
-        copyrightURI: projectData[8],
-        totalShares: Number(projectData[9]),
-        tokenURI: projectData[10],
+        title: projectData[8],
+        description: projectData[9],
+        copyrightURI: projectData[10],
+        tokenURI: projectData[11],
       });
     }
   };
@@ -449,7 +449,7 @@ export default function ProjectPage() {
                 </DialogContent>
               </Dialog>
             )}
-            {project.status === "Completed" && (
+            {project.status === "Completed" && projectShare > 0 && (
               <Button 
                 className="bg-green-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600"
                 onClick={handleClaim}

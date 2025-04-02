@@ -15,10 +15,10 @@
 
 ---
 
-- [ ] Points d'attention
-  - [ ] Sécurité
-  - [ ] Optimisations
-  - [ ] Défaillances
+- [X] Points d'attention
+  - [X] Sécurité
+  - [X] Optimisations
+  - [X] Défaillances
 
 ---
 

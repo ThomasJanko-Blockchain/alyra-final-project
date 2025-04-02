@@ -566,6 +566,11 @@ export const SerieProjectNFTAbi = [
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "ProjectDoesNotExist",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -1145,16 +1150,6 @@ export const SerieProjectNFTAbi = [
     "name": "projects",
     "outputs": [
       {
-        "internalType": "string",
-        "name": "title",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "description",
-        "type": "string"
-      },
-      {
         "internalType": "uint96",
         "name": "fundingGoal",
         "type": "uint96"
@@ -1175,6 +1170,16 @@ export const SerieProjectNFTAbi = [
         "type": "uint32"
       },
       {
+        "internalType": "uint16",
+        "name": "totalShares",
+        "type": "uint16"
+      },
+      {
+        "internalType": "bool",
+        "name": "refundClaimed",
+        "type": "bool"
+      },
+      {
         "internalType": "address",
         "name": "producer",
         "type": "address"
@@ -1186,23 +1191,23 @@ export const SerieProjectNFTAbi = [
       },
       {
         "internalType": "string",
-        "name": "copyrightURI",
+        "name": "title",
         "type": "string"
       },
       {
-        "internalType": "uint16",
-        "name": "totalShares",
-        "type": "uint16"
+        "internalType": "string",
+        "name": "description",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "copyrightURI",
+        "type": "string"
       },
       {
         "internalType": "string",
         "name": "tokenURI",
         "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "refundClaimed",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
