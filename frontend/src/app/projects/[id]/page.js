@@ -436,7 +436,7 @@ export default function ProjectPage() {
                       {project.fundingGoal - project.currentFunding <
                         investAmount && (
                         <p className="text-red-500">
-                          You can't invest more than the funding goal
+                          You can&apos;t invest more than the funding goal
                         </p>
                       )}
                     </div>
