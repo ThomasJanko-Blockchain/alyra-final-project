@@ -47,13 +47,14 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
 
     error ProjectDoesNotExist();
 
-    // Modifier to check if project exists
+    // Modifier pour vérifier si le projet existe
     modifier projectExists(uint256 _projectId) {
         // require(_projectId < projects.length, "Project does not exist");
         if (_projectId >= projects.length) revert ProjectDoesNotExist();
         _;
     }
 
+    //CONSTRUCTOR
     constructor(address _serieCoinAddress) ERC721("SerieProject", "SP") {
         require(_serieCoinAddress != address(0), "Invalid SerieCoin address");
         serieCoin = SerieCoin(_serieCoinAddress);
@@ -69,7 +70,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         string calldata _tokenURI
     ) external {
         require(_fundingGoal > 0, "Funding goal must be greater than 0");
-        require(_duration > 0 && _duration <= 3650, "Invalid duration"); // Max 10 years
+        require(_duration > 0 && _duration <= 3650, "Invalid duration"); // Max 10 ans
         require(bytes(_title).length > 0 && bytes(_title).length <= 200, "Invalid title length");
         require(bytes(_description).length > 0, "Invalid description length");
         require(bytes(_copyrightURI).length > 0, "Copyright URI cannot be empty");
@@ -88,10 +89,10 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         newProject.tokenURI = _tokenURI;
         newProject.refundClaimed = false;
 
-        // Mint the NFT to the producer
+        // Mint le NFT au créateur du projet
         _mint(msg.sender, newProjectId);
 
-        // Give initial shares to the producer
+        // Donner les parts initiales au créateur du projet
         projectShares[newProjectId][msg.sender] = 10000;
 
         emit ProjectCreated(newProjectId, _title, msg.sender, _tokenURI);
