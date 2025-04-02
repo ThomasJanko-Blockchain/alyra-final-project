@@ -8,18 +8,18 @@ import "./SerieCoin.sol";
 contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     // Structure pour stocker les informations d'un projet
     struct Project {
-        string title;
-        string description;
-        uint96 fundingGoal; // Optimized from uint256 to uint96 for sufficient range
+        uint96 fundingGoal;
         uint96 currentFunding;
-        uint32 duration; // en jours - uint32 sufficient for days
+        uint32 duration;
         uint32 startTime;
+        uint16 totalShares;
+        bool refundClaimed;
         address producer;
         ProjectStatus status;
+        string title;
+        string description;
         string copyrightURI;
-        uint16 totalShares; // 10000 max so uint16 is sufficient
         string tokenURI;
-        bool refundClaimed; // Track if refund has been claimed
     }
 
     // Énumération des différents statuts d'un projet
@@ -35,7 +35,6 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     uint32 public projectCount;
     
     // Mapping pour suivre les parts de chaque investisseur
-    // projectId => (address => shares)
     mapping(uint256 => mapping(address => uint16)) public projectShares;
     
     // Événements
@@ -46,9 +45,12 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     event SharesTransferred(uint256 indexed projectId, address indexed from, address indexed to, uint16 shares);
     event RefundClaimed(uint256 indexed projectId, address indexed investor, uint96 amount);
 
+    error ProjectDoesNotExist();
+
     // Modifier to check if project exists
     modifier projectExists(uint256 _projectId) {
-        require(_projectId < projects.length, "Project does not exist");
+        // require(_projectId < projects.length, "Project does not exist");
+        if (_projectId >= projects.length) revert ProjectDoesNotExist();
         _;
     }
 
@@ -103,27 +105,33 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     // Fonction pour investir dans un projet
     function investInProject(uint256 _projectId, uint96 _amount) external projectExists(_projectId) {
         Project storage project = projects[_projectId];
+        // Cache frequently used values
+        uint96 currentFunding = project.currentFunding;
+        uint96 fundingGoal = project.fundingGoal;
+        require(currentFunding + _amount <= fundingGoal, "Funding goal exceeded");
         require(project.status == ProjectStatus.WaitingForFunds, "Project not in funding phase");
         require(_amount > 0, "Amount must be greater than 0");
-        require(project.currentFunding + _amount <= project.fundingGoal, "Funding goal exceeded");
+        
+        uint96 newFunding = currentFunding + _amount;
 
-        // Transfert des tokens
-        require(serieCoin.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
-        
         // Calcul des parts à attribuer
-        uint16 sharesToMint = uint16((_amount * uint256(project.totalShares)) / project.fundingGoal);
-        
-        // Transfer shares from producer to investor
+        uint16 sharesToMint = uint16((_amount * uint256(project.totalShares)) / fundingGoal);
+        require((_amount * uint256(project.totalShares)) / fundingGoal <= type(uint16).max, "Share calculation overflow");
         require(projectShares[_projectId][project.producer] >= sharesToMint, "Producer has insufficient shares");
+
+        // Mise à jour du montant actuel de financement
+        project.currentFunding = newFunding;
         
         unchecked {
             projectShares[_projectId][project.producer] -= sharesToMint;
             projectShares[_projectId][msg.sender] += sharesToMint;
-            project.currentFunding += _amount;
         }
 
-        // Si le projet est entièrement financé, on passe en production
-        if (project.currentFunding >= project.fundingGoal) {
+        // Transfert des tokens
+        require(serieCoin.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+
+        // Vérification si le projet est entièrement financé
+        if (newFunding >= fundingGoal) {
             project.status = ProjectStatus.InProduction;
             project.startTime = uint32(block.timestamp);
             emit ProjectStatusChanged(_projectId, ProjectStatus.InProduction);
@@ -135,6 +143,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     // Fonction pour transférer des parts
     function transferShares(uint256 _projectId, address _to, uint16 _shares) external projectExists(_projectId) {
         require(_to != address(0), "Invalid recipient");
+        require(_to != msg.sender, "Cannot transfer shares to yourself");
         require(_shares > 0, "Amount must be greater than 0");
         require(projectShares[_projectId][msg.sender] >= _shares, "Insufficient shares");
 
@@ -192,7 +201,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         require(projectShares[_projectId][msg.sender] > 0, "No shares to claim refund for");
 
         uint16 shares = projectShares[_projectId][msg.sender];
-        uint96 refundAmount = uint96((uint256(shares) * uint256(project.currentFunding)) / project.totalShares);
+        uint96 refundAmount = uint96((uint256(shares) * uint256(project.currentFunding)) / project.fundingGoal);
 
         projectShares[_projectId][msg.sender] = 0;
 
