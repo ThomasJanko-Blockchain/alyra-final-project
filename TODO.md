@@ -28,7 +28,7 @@
 
 ---
 
-- [ ] Tests Fonctionnels
+- [X] Tests Fonctionnels
 
 ---
 
@@ -37,5 +37,5 @@
 
 ---
 
-- [ ] Déploiement smart Contrat
-  - [ ] testnet
+- [X] Déploiement smart Contrat
+  - [X] testnet
