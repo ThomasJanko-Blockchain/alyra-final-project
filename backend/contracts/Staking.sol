@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./SerieProject.sol";
+import "./SerieProjectNFT.sol";
 
 contract Staking is Ownable(msg.sender) {
     // Structure pour stocker les informations de staking
@@ -14,7 +14,7 @@ contract Staking is Ownable(msg.sender) {
     }
 
     // Variables d'état
-    SerieProject public serieProject;
+    SerieProjectNFT public serieProject;
     mapping(address => Stake[]) public stakes;
     uint256 public constant STAKING_RATE = 5; // 5% de récompense
     uint256 public constant STAKING_PERIOD = 365 days; // 1 an
@@ -24,7 +24,7 @@ contract Staking is Ownable(msg.sender) {
     event Unstaked(address indexed user, uint256 indexed projectId, uint256 amount);
 
     constructor(address _serieProjectAddress) {
-        serieProject = SerieProject(_serieProjectAddress);
+        serieProject = SerieProjectNFT(_serieProjectAddress);
     }
 
     // Fonction pour staker ses parts
@@ -32,7 +32,7 @@ contract Staking is Ownable(msg.sender) {
         require(_amount > 0, "Amount must be greater than 0");
         
         // Vérifier que l'utilisateur a les parts nécessaires
-        uint256 userShares = serieProject.getShares(_projectId, msg.sender);
+        uint256 userShares = serieProject.getSharePercentage(_projectId, msg.sender);
         require(userShares >= _amount, "Insufficient shares");
 
         // Créer un nouveau stake
@@ -63,7 +63,7 @@ contract Staking is Ownable(msg.sender) {
         require(stake.isActive, "Stake is not active");
 
         // Vérifier que le projet est terminé
-        require(serieProject.getProjectStatus(stake.projectId) == SerieProject.ProjectStatus.Completed, "Project not completed");
+        require(serieProject.getProjectStatus(stake.projectId) == SerieProjectNFT.ProjectStatus.Completed, "Project not completed");
 
         // Calculer les récompenses
         uint256 rewards = calculateRewards(msg.sender, _stakeIndex);
@@ -76,4 +76,4 @@ contract Staking is Ownable(msg.sender) {
 
         emit Unstaked(msg.sender, stake.projectId, stake.amount);
     }
-} 
+}
