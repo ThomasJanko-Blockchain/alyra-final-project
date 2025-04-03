@@ -13,6 +13,7 @@ describe("SerieCoin", function () {
     return { serieCoin, owner, addr1, addr2 };
   }
 
+  /* ############### DEPLOYMENT ############### */
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
       const { serieCoin, owner } = await loadFixture(deploySerieCoinFixture);
@@ -33,6 +34,7 @@ describe("SerieCoin", function () {
     });
   });
 
+  /* ############### MINTING ############### */
   describe("Minting", function () {
     it("Should allow owner to mint tokens", async function () {
       const { serieCoin, owner, addr1 } = await loadFixture(deploySerieCoinFixture);
@@ -52,6 +54,7 @@ describe("SerieCoin", function () {
     });
   });
 
+  /* ############### BURNING ############### */
   describe("Burning", function () {
     it("Should allow users to burn their own tokens", async function () {
       const { serieCoin, owner, addr1 } = await loadFixture(deploySerieCoinFixture);
@@ -74,6 +77,7 @@ describe("SerieCoin", function () {
     });
   });
 
+  /* ############### TRANSFERS ############### */
   describe("Transfers", function () {
     it("Should transfer tokens between accounts", async function () {
       const { serieCoin, owner, addr1, addr2 } = await loadFixture(deploySerieCoinFixture);
