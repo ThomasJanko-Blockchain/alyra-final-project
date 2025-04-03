@@ -20,12 +20,6 @@ module.exports = {
       accounts: [PRIVATE_KEY],
     },
 
-    hardhat: {
-      forking: {
-        url: RPC_URL_MAINNET,
-        blockNumber:21858926
-      }
-    }
   },
   etherscan: {
     apiKey: {

@@ -1,11 +1,9 @@
 import '@rainbow-me/rainbowkit/styles.css';
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { http } from 'viem';
 import {
-  mainnet,
+  sepolia,
   polygon,
-  optimism,
-  arbitrum,
-  base,
   hardhat
 } from 'wagmi/chains';
 
@@ -13,6 +11,9 @@ import {
 export const config = getDefaultConfig({
     appName: 'SerieCoin',
     projectId: 'fbb8ae282404605a25bbbdc0f61a1d4c',
-    chains: [mainnet, polygon, optimism, arbitrum, base, hardhat],
+    chains: [sepolia],
+    transports: {
+        [sepolia.id]: http(process.env.RPC_URL),
+    },
     ssr: true, // If your dApp uses server side rendering (SSR)
   });

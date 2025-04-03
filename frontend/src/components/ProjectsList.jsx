@@ -16,7 +16,7 @@ export default function ProjectsList() {
         "event ProjectCreated(uint256 indexed projectId, string title, address indexed producer, string tokenURI)"
         // "event ProjectCreated(uint256 indexed projectId, string title, address producer, string tokenURI)"
       ),
-      fromBlock: 0n,
+      fromBlock: 8043496n,
       toBlock: "latest",
     });
     console.log("projectCreatedEvents", projectCreatedEvents);

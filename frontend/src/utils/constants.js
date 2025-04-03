@@ -4,7 +4,7 @@ export const ProjectStatus = {
   2: "Completed",
 };
 
-export const SerieCoinAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+export const SerieCoinAddress = "0x7BC947fED7e231d023e644A9838712E8e805701F";
 export const SerieCoinAbi = [
   {
     inputs: [],
@@ -427,7 +427,7 @@ export const SerieCoinAbi = [
 ];
 
 export const SerieProjectNFTAddress =
-  "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+  "0xbba2F187ba7760D400CC9942cF54B020a910dD6A";
 export const SerieProjectNFTAbi = [
   {
     "inputs": [

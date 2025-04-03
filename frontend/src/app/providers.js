@@ -6,6 +6,7 @@ import { WagmiProvider } from 'wagmi';
 
 import { config } from '@/utils/wagmi';
 
+
 const queryClient = new QueryClient();
 
 export default function Providers({ children }) {
