@@ -5,6 +5,7 @@ import {
   LucideDollarSign,
   Send,
   UserRoundIcon,
+  Loader2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useParams } from "next/navigation";
@@ -51,6 +52,7 @@ export default function ProjectPage() {
   const [investDialogOpen, setInvestDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [metadata, setMetadata] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [project, setProject] = useState({
     title: "",
@@ -156,8 +158,8 @@ export default function ProjectPage() {
     }
 
     try {
+      setIsLoading(true);
       await refetchSrcBalance();
-      console.log("srcBalance", srcBalance);
       if (srcBalance < investAmount) {
         toast.error("You don't have enough $SRC to invest");
         return;
@@ -178,8 +180,8 @@ export default function ProjectPage() {
         args: [id, investAmount],
       });
     } catch (err) {
-      console.error("Investment failed:", err);
       toast.error("Investment failed");
+      setIsLoading(false);
     }
   };
 
@@ -190,6 +192,7 @@ export default function ProjectPage() {
       return;
     }
     try {
+      setIsLoading(true);
       writeContract({
         address: SerieProjectNFTAddress,
         abi: SerieProjectNFTAbi,
@@ -197,7 +200,7 @@ export default function ProjectPage() {
         args: [id, transfer.address, transfer.amount],
       });
     } catch (err) {
-      console.error("Transfer failed:", err);
+      setIsLoading(false);
     }
   };
 
@@ -224,21 +227,29 @@ export default function ProjectPage() {
         amount: 0,
       });
       refreshData();
+      setIsLoading(false);
     }
     if (error) {
       toast.error("Transaction failed", {
         description: error.shortMessage || error.message,
       });
+      setIsLoading(false);
     }
   }, [isConfirmed, error]);
 
   const handleClaim = async () => {
-    writeContract({
-      address: SerieProjectNFTAddress,
-      abi: SerieProjectNFTAbi,
-      functionName: "claimRefund",
-      args: [id],
-    });
+    try {
+      setIsLoading(true);
+      writeContract({
+        address: SerieProjectNFTAddress,
+        abi: SerieProjectNFTAbi,
+        functionName: "claimRefund",
+        args: [id],
+      });
+    } catch (err) {
+      console.error("Claim failed:", err);
+      setIsLoading(false);
+    }
   };
 
   if (!isConnected) {
@@ -409,8 +420,15 @@ export default function ProjectPage() {
             {project.status === "Waiting for funds" && (
               <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600">
-                    Invest
+                  <Button 
+                    className="bg-orange-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      "Invest"
+                    )}
                   </Button>
                 </DialogTrigger>
                 <DialogContent
@@ -457,8 +475,16 @@ export default function ProjectPage() {
                       )}
                     </div>
                     <DialogFooter>
-                      <Button type="submit" onClick={handleInvest}>
-                        Confirm Investment
+                      <Button 
+                        type="submit" 
+                        onClick={handleInvest}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                        ) : (
+                          "Confirm Investment"
+                        )}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -469,8 +495,13 @@ export default function ProjectPage() {
               <Button 
                 className="bg-green-500 rounded-full text-white text-2xl text-center p-6 w-1/3 hover:bg-orange-600"
                 onClick={handleClaim}
+                disabled={isLoading}
               >
-                Claim Funds
+                {isLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  "Claim Funds"
+                )}
               </Button>
             )}
           </div>
@@ -479,16 +510,21 @@ export default function ProjectPage() {
               theme === "dark" ? "bg-[#23262f]" : "bg-gray-100"
             }`}
           >
-            <p className="text-gray-400">{metadata?.description || project.description}</p>
+            <p className="text-gray-600 dark:text-gray-300">{(metadata?.description || project.description)?.split('\n').map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < (metadata?.description || project.description)?.split('\n').length - 1 && <br />}
+              </span>
+            ))}</p>
             <div className="flex flex-wrap w-full justify-around gap-3">
               <div
                 className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${
                   theme === "dark" ? "bg-[#2d2f38]" : "bg-[#fbfbfb]"
                 }`}
               >
-                <p className="text-sm text-gray-600">Funding Goal</p>
-                <p className="text-xl font-bold">
-                  {metadata?.attributes?.find(attr => attr.trait_type === "Funding Goal")?.value || project.fundingGoal} $
+                <p className="text-sm text-gray-600 dark:text-gray-300">Funding Goal</p>
+                <p className="text-xl font-bold text-green-800 dark:text-green-200">
+                  {metadata?.attributes?.find(attr => attr.trait_type === "Funding Goal")?.value || project.fundingGoal} SRC
                 </p>
               </div>
               <div
@@ -496,8 +532,8 @@ export default function ProjectPage() {
                   theme === "dark" ? "bg-[#2d2f38]" : "bg-[#f7f8f9]"
                 }`}
               >
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-xl font-bold">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Duration</p>
+                <p className="text-xl font-bold text-purple-800 dark:text-purple-200">
                   {metadata?.attributes?.find(attr => attr.trait_type === "Duration")?.value || project.duration} days
                 </p>
               </div>
@@ -506,9 +542,9 @@ export default function ProjectPage() {
                   theme === "dark" ? "bg-[#2d2f38]" : "bg-[#f7f8f9]"
                 }`}
               >
-                <p className="text-sm text-gray-600">Copyright</p>
-                <p className="text-xl font-bold text-ellipsis overflow-hidden">
-                  {project.copyrightURI}
+                <p className="text-sm text-gray-600 dark:text-gray-300">Status</p>
+                <p className="text-xl font-bold text-blue-800 dark:text-blue-200">
+                  {metadata?.attributes?.find(attr => attr.trait_type === "Status")?.value || project.status}
                 </p>
               </div>
             </div>
