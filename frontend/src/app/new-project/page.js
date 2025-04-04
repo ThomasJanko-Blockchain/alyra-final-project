@@ -71,7 +71,7 @@ export default function NewProjectPage() {
                 formData,
                 {
                     headers: {
-                        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+                        'Authorization': `Bearer ${process.env.PINATA_JWT}`,
                         'Content-Type': 'multipart/form-data',
                     }
                 }
@@ -106,7 +106,7 @@ export default function NewProjectPage() {
                 metadata,
                 {
                     headers: {
-                        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+                        'Authorization': `Bearer ${process.env.PINATA_JWT}`,
                         'Content-Type': 'application/json',
                     }
                 }
