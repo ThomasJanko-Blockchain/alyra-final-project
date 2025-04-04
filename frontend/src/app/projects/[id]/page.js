@@ -35,6 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import axios from 'axios';
 
 export default function ProjectPage() {
   const { address, isConnected } = useAccount();
@@ -49,6 +50,7 @@ export default function ProjectPage() {
   });
   const [investDialogOpen, setInvestDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [metadata, setMetadata] = useState(null);
 
   const [project, setProject] = useState({
     title: "",
@@ -102,6 +104,44 @@ export default function ProjectPage() {
       setProjectShare(Number(projectShares));
     }
   }, [projectShares]);
+
+  const fetchMetadata = async (tokenURI) => {
+    try {
+      console.log("httpURI", tokenURI);
+      const response = await axios.get(tokenURI);
+      if (response.data.image) {
+        response.data.image = response.data.image.replace('ipfs://', 'https://ipfs.io/ipfs/');
+      }
+      setMetadata(response.data);
+    } catch (error) {
+      console.error("Error fetching metadata:", error);
+      toast.error("Failed to load project metadata");
+    }
+  };
+
+  const getProjectData = () => {
+    if (projectData) {
+      const newProject = {
+        fundingGoal: Number(projectData[0]),
+        currentFunding: Number(projectData[1]),
+        duration: Number(projectData[2]),
+        startTime: Number(projectData[3]),
+        totalShares: Number(projectData[4]),
+        producer: projectData[6],
+        status: ProjectStatus[projectData[7]],
+        title: projectData[8],
+        description: projectData[9],
+        copyrightURI: projectData[10],
+        tokenURI: projectData[11],
+      };
+      setProject(newProject);
+      fetchMetadata(newProject.tokenURI);
+    }
+  };
+
+  useEffect(() => {
+    getProjectData();
+  }, [projectData]);
 
   const handleInvest = async (e) => {
     e.preventDefault();
@@ -192,25 +232,6 @@ export default function ProjectPage() {
     }
   }, [isConfirmed, error]);
 
-  const getProjectData = () => {
-    if (projectData) {
-      // console.log("projectData", projectData);
-      setProject({
-        fundingGoal: Number(projectData[0]),
-        currentFunding: Number(projectData[1]),
-        duration: Number(projectData[2]),
-        startTime: Number(projectData[3]),
-        totalShares: Number(projectData[4]),
-        producer: projectData[6],
-        status: ProjectStatus[projectData[7]],
-        title: projectData[8],
-        description: projectData[9],
-        copyrightURI: projectData[10],
-        tokenURI: projectData[11],
-      });
-    }
-  };
-
   const handleClaim = async () => {
     writeContract({
       address: SerieProjectNFTAddress,
@@ -219,10 +240,6 @@ export default function ProjectPage() {
       args: [id],
     });
   };
-  
-  useEffect(() => {
-    getProjectData();
-  }, [projectData]);
 
   if (!isConnected) {
     return (
@@ -239,24 +256,21 @@ export default function ProjectPage() {
           {/* TOP BAR  */}
           <div>
             <img
-              src={project.tokenURI}
+              src={metadata?.image || project.tokenURI}
               className="w-32 h-32 rounded-md object-cover"
-              style={{
-                backgroundImage: `url("https://placehold.co/600x400")`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
+              onError={(e) => {
+                e.target.src = "https://placehold.co/600x400";
               }}
             />
             <div className="flex justify-between items-center mt-6">
               <div>
-                <h2 className="text-4xl font-bold">{project.title}</h2>
+                <h2 className="text-4xl font-bold">{metadata?.name || project.title}</h2>
                 <p className="text-xl mt-4 text-gray-400">
                   {project.producer.slice(0, 6)}...{project.producer.slice(-4)}
                 </p>
               </div>
               <div className="flex justify-center items-center text-center text-lg text-gray-600 rounded-full bg-gray-200 w-fit py-1 px-3">
-                {project.status}
+                {metadata?.attributes?.find(attr => attr.trait_type === "Status")?.value || project.status}
               </div>
             </div>
           </div>
@@ -270,7 +284,9 @@ export default function ProjectPage() {
                 <p className="text-sm text-gray-600 text-nowrap">
                   Funding Goal
                 </p>
-                <p className="text-xl font-bold">{project.fundingGoal} $</p>
+                <p className="text-xl font-bold">
+                  {metadata?.attributes?.find(attr => attr.trait_type === "Funding Goal")?.value || project.fundingGoal} $
+                </p>
               </div>
             </div>
 
@@ -463,12 +479,7 @@ export default function ProjectPage() {
               theme === "dark" ? "bg-[#23262f]" : "bg-gray-100"
             }`}
           >
-            <p className="text-gray-400">{project.description?.split('\n').map((line, i) => (
-              <span key={i}>
-                {line}
-                {i < project.description.split('\n').length - 1 && <br />}
-              </span>
-            ))}</p>
+            <p className="text-gray-400">{metadata?.description || project.description}</p>
             <div className="flex flex-wrap w-full justify-around gap-3">
               <div
                 className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${
@@ -476,7 +487,9 @@ export default function ProjectPage() {
                 }`}
               >
                 <p className="text-sm text-gray-600">Funding Goal</p>
-                <p className="text-xl font-bold">{project.fundingGoal} $</p>
+                <p className="text-xl font-bold">
+                  {metadata?.attributes?.find(attr => attr.trait_type === "Funding Goal")?.value || project.fundingGoal} $
+                </p>
               </div>
               <div
                 className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${
@@ -484,7 +497,9 @@ export default function ProjectPage() {
                 }`}
               >
                 <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-xl font-bold">{project.duration} days</p>
+                <p className="text-xl font-bold">
+                  {metadata?.attributes?.find(attr => attr.trait_type === "Duration")?.value || project.duration} days
+                </p>
               </div>
               <div
                 className={`flex flex-col gap-y-1 rounded-lg p-4 w-[200px] ${
