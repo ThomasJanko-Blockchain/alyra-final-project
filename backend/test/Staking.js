@@ -5,6 +5,7 @@ const {
   const { ethers } = require("hardhat");
 
   
+  
   describe("Staking", function () {
     // Fixture pour déployer les contrats nécessaires aux tests
     async function deployStakingFixture() {
@@ -36,6 +37,7 @@ const {
         return { staking, serieCoin, serieProject, owner, addr1, addr2 };
     }
 
+    /* ############### DEPLOYMENT ############### */
     describe("Deployment", function () {
         // Vérifie que le propriétaire est correctement défini
         it("Should set the right owner", async function () {
@@ -64,6 +66,7 @@ const {
         });
     });
 
+    /* ############### STAKING ############### */
     describe("Staking", function () {
         // Vérifie la création d'un stake lors de l'investissement dans un projet
         it("Should create a stake when investing in a project", async function () {
@@ -650,22 +653,22 @@ const {
                 "ipfs://test2"
             );
 
-            // Approve tokens for both projects
+            // Approbation des jetons pour les deux projets
             await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("200"));
 
-            // Invest in both projects
+            // Investissement dans les deux projets
             await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
             await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
 
-            // Find stake index for first project
+            // Recherche de l'index du stake pour le premier projet
             const stakeIndex1 = await staking.getStakeIndexForProject(0, addr1.address);
             expect(stakeIndex1).to.equal(0);
 
-            // Find stake index for second project
+            // Recherche de l'index du stake pour le second projet
             const stakeIndex2 = await staking.getStakeIndexForProject(1, addr1.address);
             expect(stakeIndex2).to.equal(1);
 
-            // Find stake index for non-existent project
+            // Recherche de l'index du stake pour un projet inexistant
             const stakeIndex3 = await staking.getStakeIndexForProject(2, addr1.address);
             expect(stakeIndex3).to.equal(ethers.MaxUint256);
         });
@@ -780,5 +783,175 @@ const {
 
         
     });
+
+    /* ############### RECOMPENSES ############### */
+    describe("Rewards Calculation", function () {
+        let staking, serieCoin, serieProject, owner, addr1, addr2;
+
+        beforeEach(async function () {
+            ({ staking, serieCoin, serieProject, owner, addr1, addr2 } = await loadFixture(deployStakingFixture));
+
+            // Create and invest in project
+            await serieProject.createProject(
+                "Test Project",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test",
+                "ipfs://test"
+            );
+
+            // Approve and invest the full amount to reach funding goal
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
+
+            // Project should now be in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(0);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Now we can complete the project
+            await serieProject.connect(owner).forceCompleteProject(0);
+        });
+
+        it("Should return zero rewards when time staked is exactly zero", async function () {
+            const rewards = await staking.calculateRewards(addr1.address, 0);
+            expect(rewards).to.equal(0);
+        });
+
+        it("Should return zero rewards when project is completed in the same block as staking", async function () {
+            // Create a new project and invest the full amount
+            await serieProject.createProject(
+                "Test Project 2",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test2",
+                "ipfs://test2"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+
+            // Verify project is in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(1);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Complete the project in the same block
+            await serieProject.connect(owner).forceCompleteProject(1);
+
+            const rewards = await staking.calculateRewards(addr1.address, 1);
+            expect(rewards).to.equal(0);
+        });
+
+        it("Should return zero rewards when calculating rewards immediately after project completion", async function () {
+            // Create a new project and invest the full amount
+            await serieProject.createProject(
+                "Test Project 2",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test2",
+                "ipfs://test2"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+
+            // Verify project is in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(1);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Complete the project
+            await serieProject.connect(owner).forceCompleteProject(1);
+
+            // Calculate rewards immediately after completion
+            const rewards = await staking.calculateRewards(addr1.address, 1);
+            expect(rewards).to.equal(0);
+        });
+
+        it("Should return zero rewards when claiming rewards immediately after project completion", async function () {
+            // Create a new project and invest the full amount
+            await serieProject.createProject(
+                "Test Project 2",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test2",
+                "ipfs://test2"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+
+            // Verify project is in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(1);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Complete the project
+            await serieProject.connect(owner).forceCompleteProject(1);
+
+            // Try to claim rewards immediately
+            await expect(staking.connect(addr1).claimRewards(1))
+                .to.be.revertedWith("No rewards to claim");
+        });
+
+        it("Should return zero rewards when unstaking immediately after project completion", async function () {
+            // Create a new project and invest the full amount
+            await serieProject.createProject(
+                "Test Project 2",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test2",
+                "ipfs://test2"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+
+            // Verify project is in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(1);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Complete the project
+            await serieProject.connect(owner).forceCompleteProject(1);
+
+            const initialBalance = await serieCoin.balanceOf(addr1.address);
+            await staking.connect(addr1).unstakeAndClaim(1);
+            const finalBalance = await serieCoin.balanceOf(addr1.address);
+
+            // Should only return the staked amount, no rewards
+            expect(finalBalance - initialBalance).to.equal(ethers.parseEther("100"));
+        });
+
+        it("Should handle multiple stakes with zero time in the same project", async function () {
+            // Create a new project with higher funding goal
+            await serieProject.createProject(
+                "Test Project 2",
+                "Test Description",
+                ethers.parseEther("200"),
+                30,
+                "ipfs://test2",
+                "ipfs://test2"
+            );
+
+            // Create multiple stakes in the same project
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("200"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(1, ethers.parseEther("100"));
+
+            // Verify project is in InProduction status
+            const projectStatus = await serieProject.getProjectStatus(1);
+            expect(projectStatus).to.equal(1); // 1 = InProduction
+
+            // Complete the project
+            await serieProject.connect(owner).forceCompleteProject(1);
+
+            // Check rewards for both stakes
+            const rewards1 = await staking.calculateRewards(addr1.address, 1);
+            const rewards2 = await staking.calculateRewards(addr1.address, 2);
+            expect(rewards1).to.equal(0);
+            expect(rewards2).to.equal(0);
+        });
+    });
   });
-  
