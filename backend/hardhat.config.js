@@ -1,15 +1,17 @@
 require("@nomicfoundation/hardhat-toolbox");
 require('hardhat-docgen');
 require('dotenv').config();
-require ('solidity-coverage');
+require('solidity-coverage');
 
 const { PRIVATE_KEY, RPC_URL_SEPOLIA, ETHERSCAN_API_KEY, RPC_URL_MAINNET } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.28",
-  // defaultNetwork: "localhost",
   networks: {
+    hardhat: {
+      chainId: 31337,
+    },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
