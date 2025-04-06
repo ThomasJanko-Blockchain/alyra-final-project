@@ -541,7 +541,7 @@ export default function ProjectPage() {
               >
                 <p className="text-sm text-gray-600 dark:text-gray-300">Status</p>
                 <p className="text-xl font-bold text-blue-800 dark:text-blue-200">
-                  {metadata?.attributes?.find(attr => attr.trait_type === "Status")?.value || project.status}
+                  {project.status}
                 </p>
               </div>
             </div>

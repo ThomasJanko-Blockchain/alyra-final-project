@@ -14,7 +14,7 @@ export default function NavBar() {
         <div className="flex justify-evenly items-center gap-x-8 text-lg font-semibold">
             <Link href="/">Home</Link>
             <Link href="/new-project">Create Project</Link>
-            <Link href="/">Contact</Link>
+            <Link href="/whitepaper">WhitePaper</Link>
         </div>
         <div className="flex justify-evenly items-center gap-x-6">
             <ModeToggle />

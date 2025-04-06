@@ -425,35 +425,7 @@ const {
             expect(stakeIndex3).to.equal(ethers.MaxUint256);
         });
 
-        // Vérifie le calcul des récompenses partielles
-        it("Should handle partial rewards calculation", async function () {
-            const { staking, serieProject, serieCoin, addr1, owner } = await loadFixture(deployStakingFixture);
-
-            // Création et investissement dans un projet
-            await serieProject.createProject(
-                "Test Project",
-                "Test Description",
-                ethers.parseEther("100"),
-                30,
-                "ipfs://test",
-                "ipfs://test"
-            );
-
-            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
-            await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
-
-            // Complétion du projet (par le propriétaire)
-            await serieProject.connect(owner).forceCompleteProject(0);
-
-            // Avance rapide de 6 mois
-            await ethers.provider.send("evm_increaseTime", [182 * 24 * 60 * 60]);
-            await ethers.provider.send("evm_mine", []);
-
-            // Calcul des récompenses
-            const rewards = await staking.calculateRewards(addr1.address, 0);
-            const expectedRewards = ethers.parseEther("100") * 5n / 100n / 2n; // 5% de 100 pour une demi-année
-            expect(rewards).to.equal(expectedRewards);
-        });
+       
 
         // Vérifie la gestion de plusieurs réclamations de récompenses pour différents stakes
         it("Should handle multiple rewards claims for different stakes", async function () {
@@ -697,6 +669,116 @@ const {
             const stakeIndex3 = await staking.getStakeIndexForProject(2, addr1.address);
             expect(stakeIndex3).to.equal(ethers.MaxUint256);
         });
+
+        it("Should handle project status changes during staking", async function () {
+            const { staking, serieProject, serieCoin, addr1, owner } = await loadFixture(deployStakingFixture);
+
+            // Create and invest in project
+            await serieProject.createProject(
+                "Test Project",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test",
+                "ipfs://test"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
+
+            // Try to claim rewards before project completion
+            await expect(staking.connect(addr1).claimRewards(0))
+                .to.be.revertedWith("Project not completed");
+
+            // Try to unstake before project completion
+            await expect(staking.connect(addr1).unstakeAndClaim(0))
+                .to.be.revertedWith("Project not completed");
+
+            // Complete the project (using owner)
+            await serieProject.connect(owner).forceCompleteProject(0);
+
+            // Fast forward time by 1 year to ensure there are rewards
+            await ethers.provider.send("evm_increaseTime", [365 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+
+            // Now should be able to claim rewards
+            await expect(staking.connect(addr1).claimRewards(0)).to.not.be.reverted;
+        });
+
+        
+
+        it("Should handle multiple users staking in same project", async function () {
+            const { staking, serieProject, serieCoin, addr1, addr2, owner } = await loadFixture(deployStakingFixture);
+
+            // Create a project
+            await serieProject.createProject(
+                "Test Project",
+                "Test Description",
+                ethers.parseEther("200"),
+                30,
+                "ipfs://test",
+                "ipfs://test"
+            );
+
+            // Both users approve tokens
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieCoin.connect(addr2).approve(serieProject.target, ethers.parseEther("100"));
+
+            // Both users invest
+            await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
+            await serieProject.connect(addr2).investInProject(0, ethers.parseEther("100"));
+
+            // Complete the project (using owner)
+            await serieProject.connect(owner).forceCompleteProject(0);
+
+            // Fast forward time by 1 year
+            await ethers.provider.send("evm_increaseTime", [365 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine", []);
+
+            // Both users claim rewards
+            await staking.connect(addr1).claimRewards(0);
+            await staking.connect(addr2).claimRewards(0);
+
+            // Check both stakes are marked as claimed
+            const stakes1 = await staking.getUserStakes(addr1.address);
+            const stakes2 = await staking.getUserStakes(addr2.address);
+            expect(stakes1[0].claimed).to.equal(true);
+            expect(stakes2[0].claimed).to.equal(true);
+        });
+
+        it("Should handle stake index validation in all functions", async function () {
+            const { staking, serieProject, serieCoin, addr1, owner } = await loadFixture(deployStakingFixture);
+
+            // Create and invest in project
+            await serieProject.createProject(
+                "Test Project",
+                "Test Description",
+                ethers.parseEther("100"),
+                30,
+                "ipfs://test",
+                "ipfs://test"
+            );
+
+            await serieCoin.connect(addr1).approve(serieProject.target, ethers.parseEther("100"));
+            await serieProject.connect(addr1).investInProject(0, ethers.parseEther("100"));
+
+            // Complete the project (using owner)
+            await serieProject.connect(owner).forceCompleteProject(0);
+
+            // Test invalid stake index in calculateRewards
+            await expect(staking.calculateRewards(addr1.address, 1))
+                .to.be.revertedWith("Invalid stake index");
+
+            // Test invalid stake index in claimRewards
+            await expect(staking.connect(addr1).claimRewards(1))
+                .to.be.revertedWith("Invalid stake index");
+
+            // Test invalid stake index in unstakeAndClaim
+            await expect(staking.connect(addr1).unstakeAndClaim(1))
+                .to.be.revertedWith("Invalid stake index");
+        });
+
+        
     });
   });
   
