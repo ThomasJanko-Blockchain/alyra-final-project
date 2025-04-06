@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./SerieCoin.sol";
+import "./Staking.sol";
 
 contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     // Structure pour stocker les informations d'un projet
@@ -47,6 +48,8 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
 
     error ProjectDoesNotExist();
 
+    Staking public stakingContract;
+
     // Modifier pour vérifier si le projet existe
     modifier projectExists(uint256 _projectId) {
         // require(_projectId < projects.length, "Project does not exist");
@@ -55,9 +58,11 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
     }
 
     //CONSTRUCTOR
-    constructor(address _serieCoinAddress) ERC721("SerieProject", "SP") {
+    constructor(address _serieCoinAddress, address _stakingAddress) ERC721("SerieProject", "SP") {
         require(_serieCoinAddress != address(0), "Invalid SerieCoin address");
+        require(_stakingAddress != address(0), "Invalid Staking address");
         serieCoin = SerieCoin(_serieCoinAddress);
+        stakingContract = Staking(_stakingAddress);
     }
 
     // Fonction pour créer un nouveau projet
@@ -112,6 +117,7 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
         require(currentFunding + _amount <= fundingGoal, "Funding goal exceeded");
         require(project.status == ProjectStatus.WaitingForFunds, "Project not in funding phase");
         require(_amount > 0, "Amount must be greater than 0");
+        require(msg.sender != project.producer, "Producer cannot invest in their own project");
         
         uint96 newFunding = currentFunding + _amount;
 
@@ -130,6 +136,9 @@ contract SerieProjectNFT is ERC721, Ownable(msg.sender) {
 
         // Transfert des tokens
         require(serieCoin.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+
+        // Notify staking contract about the investment
+        stakingContract.onInvestment(_projectId, msg.sender, _amount);
 
         // Vérification si le projet est entièrement financé
         if (newFunding >= fundingGoal) {

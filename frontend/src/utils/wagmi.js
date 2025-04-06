@@ -14,6 +14,7 @@ export const config = getDefaultConfig({
     chains: [sepolia],
     transports: {
         [sepolia.id]: http(process.env.RPC_URL),
+        // [hardhat.id]: http(),
     },
     ssr: true, // If your dApp uses server side rendering (SSR)
   });

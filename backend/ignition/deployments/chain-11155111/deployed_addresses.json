@@ -1,4 +1,5 @@
 {
-  "MultipleContracts#SerieCoin": "0x7BC947fED7e231d023e644A9838712E8e805701F",
-  "MultipleContracts#SerieProjectNFT": "0xbba2F187ba7760D400CC9942cF54B020a910dD6A"
+  "MultipleContracts#SerieCoin": "0x0348A29a733cf446d758401189dc97f306824E87",
+  "MultipleContracts#Staking": "0x41EA17fCdE46e98D6dc9D66e8Eb0a0c946297078",
+  "MultipleContracts#SerieProjectNFT": "0x79806efCcA80A4f59126574EE9aEE80ac47F4750"
 }

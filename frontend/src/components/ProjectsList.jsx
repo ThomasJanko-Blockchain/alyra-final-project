@@ -16,7 +16,7 @@ export default function ProjectsList() {
       event: parseAbiItem(
         "event ProjectCreated(uint256 indexed projectId, string title, address indexed producer, string tokenURI)"
       ),
-      fromBlock: 8043496n,
+      fromBlock: 0n,
       toBlock: "latest",
     });
 
@@ -70,46 +70,46 @@ export default function ProjectsList() {
     address: SerieProjectNFTAddress,
     abi: SerieProjectNFTAbi,
     eventName: "ProjectCreated",
-    onLogs: (logs) => {
-      // When a new project is created, fetch its metadata and add it to the list
-      Promise.all(
-        logs.map(async (log) => {
-          try {
-            const httpURI = log.args.tokenURI;
-            const response = await axios.get(httpURI);
-            if (response.data.image) {
-              response.data.image = response.data.image.replace('ipfs://', 'https://ipfs.io/ipfs/');
-            }
-            const metadata = response.data;
+    // onLogs: (logs) => {
+    //   // When a new project is created, fetch its metadata and add it to the list
+    //   Promise.all(
+    //     logs.map(async (log) => {
+    //       try {
+    //         const httpURI = log.args.tokenURI;
+    //         const response = await axios.get(httpURI);
+    //         if (response.data.image) {
+    //           response.data.image = response.data.image.replace('ipfs://', 'https://ipfs.io/ipfs/');
+    //         }
+    //         const metadata = response.data;
 
-            return {
-              projectId: log.args.projectId,
-              title: metadata.name,
-              description: metadata.description,
-              producer: log.args.producer,
-              image: metadata.image,
-              status: metadata.attributes.find(attr => attr.trait_type === "Status")?.value,
-              fundingGoal: metadata.attributes.find(attr => attr.trait_type === "Funding Goal")?.value,
-              duration: metadata.attributes.find(attr => attr.trait_type === "Duration")?.value
-            };
-          } catch (error) {
-            console.error(`Error fetching metadata for new project ${log.args.projectId}:`, error);
-            return {
-              projectId: log.args.projectId,
-              title: log.args.title,
-              producer: log.args.producer,
-              image: log.args.tokenURI,
-              description: "Error loading metadata",
-              status: "Unknown",
-              fundingGoal: "Unknown",
-              duration: "Unknown"
-            };
-          }
-        })
-      ).then(newProjects => {
-        setProjects(prevProjects => [...newProjects, ...prevProjects]);
-      });
-    },
+    //         return {
+    //           projectId: log.args.projectId,
+    //           title: metadata.name,
+    //           description: metadata.description,
+    //           producer: log.args.producer,
+    //           image: metadata.image,
+    //           status: metadata.attributes.find(attr => attr.trait_type === "Status")?.value,
+    //           fundingGoal: metadata.attributes.find(attr => attr.trait_type === "Funding Goal")?.value,
+    //           duration: metadata.attributes.find(attr => attr.trait_type === "Duration")?.value
+    //         };
+    //       } catch (error) {
+    //         console.error(`Error fetching metadata for new project ${log.args.projectId}:`, error);
+    //         return {
+    //           projectId: log.args.projectId,
+    //           title: log.args.title,
+    //           producer: log.args.producer,
+    //           image: log.args.tokenURI,
+    //           description: "Error loading metadata",
+    //           status: "Unknown",
+    //           fundingGoal: "Unknown",
+    //           duration: "Unknown"
+    //         };
+    //       }
+    //     })
+    //   ).then(newProjects => {
+    //     setProjects(prevProjects => [...newProjects, ...prevProjects]);
+    //   });
+    // },
     onError: (error) => {
       console.error(error);
     },

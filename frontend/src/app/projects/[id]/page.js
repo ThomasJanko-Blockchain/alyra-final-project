@@ -123,6 +123,7 @@ export default function ProjectPage() {
 
   const getProjectData = () => {
     if (projectData) {
+      console.log("projectData", projectData);
       const newProject = {
         fundingGoal: Number(projectData[0]),
         currentFunding: Number(projectData[1]),
@@ -216,26 +217,19 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (isConfirmed) {
-      toast.success("Transaction confirmed", {
-        description: `Hash: ${hash}`,
-      });
-      setInvestDialogOpen(false);
-      setTransferDialogOpen(false);
-      setInvestAmount(0);
-      setTransfer({
-        address: "",
-        amount: 0,
+      toast.success("Funds claimed successfully", {
+        description: `Transaction hash: ${hash}`,
       });
       refreshData();
       setIsLoading(false);
     }
     if (error) {
       toast.error("Transaction failed", {
-        description: error.shortMessage || error.message,
+        description: error.shortMessage || error.message || "An error occurred during the transaction",
       });
       setIsLoading(false);
     }
-  }, [isConfirmed, error]);
+  }, [isConfirmed, error, hash]);
 
   const handleClaim = async () => {
     try {
@@ -248,6 +242,9 @@ export default function ProjectPage() {
       });
     } catch (err) {
       console.error("Claim failed:", err);
+      toast.error("Failed to claim funds", {
+        description: err.shortMessage || err.message || "An error occurred while claiming funds",
+      });
       setIsLoading(false);
     }
   };
@@ -281,7 +278,7 @@ export default function ProjectPage() {
                 </p>
               </div>
               <div className="flex justify-center items-center text-center text-lg text-gray-600 rounded-full bg-gray-200 w-fit py-1 px-3">
-                {metadata?.attributes?.find(attr => attr.trait_type === "Status")?.value || project.status}
+                {project.status}
               </div>
             </div>
           </div>

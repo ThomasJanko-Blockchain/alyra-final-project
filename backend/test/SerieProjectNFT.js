@@ -12,14 +12,25 @@ describe("SerieProjectNFT", function () {
     // Déploiement du contrat SerieCoin
     const SerieCoin = await ethers.getContractFactory("SerieCoin");
     const serieCoin = await SerieCoin.deploy();
+    await serieCoin.waitForDeployment();
+
+    // Déploiement du contrat Staking
+    const Staking = await ethers.getContractFactory("Staking");
+    const staking = await Staking.deploy(serieCoin.target);
+    await staking.waitForDeployment();
 
     // Déploiement du contrat SerieProjectNFT
     const SerieProjectNFT = await ethers.getContractFactory("SerieProjectNFT");
-    const serieProjectNFT = await SerieProjectNFT.deploy(serieCoin.target);
+    const serieProjectNFT = await SerieProjectNFT.deploy(serieCoin.target, staking.target);
+    await serieProjectNFT.waitForDeployment();
+
+    // Set SerieProjectNFT in Staking contract
+    await staking.setSerieProjectNFT(serieProjectNFT.target);
 
     return { 
       serieCoin, 
       serieProjectNFT, 
+      staking,
       owner, 
       producer, 
       investor1, 
@@ -30,6 +41,7 @@ describe("SerieProjectNFT", function () {
   // Variables partagées entre les tests
   let serieCoin;
   let serieProjectNFT;
+  let staking;
   let owner;
   let producer;
   let investor1;
@@ -40,6 +52,7 @@ describe("SerieProjectNFT", function () {
     const fixture = await loadFixture(deployFixture);
     serieCoin = fixture.serieCoin;
     serieProjectNFT = fixture.serieProjectNFT;
+    staking = fixture.staking;
     owner = fixture.owner;
     producer = fixture.producer;
     investor1 = fixture.investor1;
@@ -59,7 +72,7 @@ describe("SerieProjectNFT", function () {
 
     it("Devrait échouer avec une adresse SerieCoin nulle", async function () {
       const SerieProjectNFT = await ethers.getContractFactory("SerieProjectNFT");
-      await expect(SerieProjectNFT.deploy(ethers.ZeroAddress))
+      await expect(SerieProjectNFT.deploy(ethers.ZeroAddress, ethers.ZeroAddress))
         .to.be.revertedWith("Invalid SerieCoin address");
     });
   });
