@@ -14,12 +14,13 @@ module.exports = {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
     },
-    sepolia: {
-      url: RPC_URL_SEPOLIA || "https://eth-sepolia.g.alchemy.com/v2/your-api-key",
-      chainId: 11155111,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
-    },
-
+    ...(PRIVATE_KEY && RPC_URL_SEPOLIA ? {
+      sepolia: {
+        url: RPC_URL_SEPOLIA,
+        chainId: 11155111,
+        accounts: [PRIVATE_KEY],
+      }
+    } : {}),
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY || "your-etherscan-api-key",
